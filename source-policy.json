@@ -49,9 +49,7 @@
     "docs/PLUGINS.md",
     "docs/PUBLISHING.md",
     "docs/SOURCE_POLICY.md",
-    "docs/images/app-icon.png",
-    "docs/images/home-demo.png",
-    "docs/images/onboarding.png"
+    "docs/images/app-icon.png"
   ],
   "allowedPatterns": [
     ".github/**/*.md",
