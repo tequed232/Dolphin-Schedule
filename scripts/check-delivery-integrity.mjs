@@ -132,20 +132,25 @@ const expected={
 };
 // Scope allowance, not a new hash baseline. Unlisted business files remain frozen.
 // Mixed UI/bridge files require review plus behavior checks.
+// Reviewed business and UX fixes retain the original
+// parser hashes and mutations below remain unchanged; new logic has focused tests.
 const reviewedChanges={
+ "app/src/main/java/com/dolphin/calendar/CalendarSync.kt":"2026-10-17 preserve hidden active course calendars and original visibility; retire only known undo copies, retain legacy undo compatibility",
+ "web/src/screens/SystemCalendar.tsx":"2026-10-17 count a specific-date course once even when its repeating weeks are empty; leave course data unchanged",
  "web/src/nav/useNavigation.ts":"1.5.1 add plugins secondary route type only; existing navigation implementation unchanged",
  "app/src/main/java/com/dolphin/calendar/Notifications.kt":"1.5.1 remove repeated expanded locations, timers and numeric stages; preserve actions and collapsed building",
- "web/src/components/CourseEditor.tsx":"1.4.10 synchronize the temporary date and displayed weekday while editing",
+ "web/src/components/CourseEditor.tsx":"2026-10-18 guard stale course edits/deletions and revalidate current bounds/conflict confirmation inside the transaction; retain temporary-date synchronization",
  "app/src/main/java/com/dolphin/calendar/ReminderScheduler.kt":"1.4.10 validate queued reminders against current settings, occurrences and time before delivery; isolate damaged elements",
  "web/src/lib/storage.ts":"1.4.10 recover failed/closed IndexedDB connections and reject damaged snapshots without overwriting data",
  "web/src/state/AppState.tsx":"1.4.10 skip Web notification thumbnails and process Android covers only when books change",
  "web/src/state/useAppUpdates.ts":"1.4.10 prevent stale cache overwrites and clear removed releases on 404",
  "web/src/components/ChoiceSelect.tsx":"1.4.10 keyboard selection and menu clipping within the visible keyboard/dialog bounds",
- "web/src/components/CourseSheet.tsx":"1.4.10 return keyboard focus to the course trigger",
- "web/src/components/ScheduleSettings.tsx":"1.4.10 lock fields during save to prevent silently discarded edits",
+ "web/src/components/CourseSheet.tsx":"2026-10-18 guard textbook ownership and stored baseline, preserve drafts and confirm reload; retain focus restoration and cover handling",
+ "web/src/components/ScheduleSettings.tsx":"2026-10-18 preserve dirty drafts on external updates, check edit scope inside transaction and save times-only fields separately",
+ "web/src/components/FileImport.tsx":"2026-10-18 carry the actual parse baseline and retained sheet/mapping recipe into preview; original parsers remain frozen",
  "web/src/lib/import.ts":"1.4.10 exact mixed-parity/empty-week bug fixes projected out before original algorithm hash check",
  "web/src/lib/fileImport.ts":"1.4.9 unified template data only; parser remainder separately frozen",
- "web/src/screens/Import.tsx":"1.4.9 unified template; 1.5.1 accept plugin JSON through original preview/commit flow without parser changes",
+ "web/src/screens/Import.tsx":"2026-10-18 reject stale previews in transaction, preserve source/mapping/manual date for explicit repreview; retain original parser algorithms",
  "web/src/components/InfiniteDateStrip.tsx":"1.4.10 incrementally generate the existing horizontal/vertical date window without changing its dates",
  "web/src/components/TimetableGrid.tsx":"1.4.10 memoize overlap presentation and skip unchanged pointer targets; original edit/save behavior retained",
  "web/src/theme/tokens.css":"1.4.8 shared light/dark/system course surface and text tokens",
@@ -163,7 +168,7 @@ const reviewedChanges={
  "web/src/screens/Home.tsx":"1.4.10 memoized course/date presentation and active-screen clock; existing data and navigation retained",
  "web/src/screens/Settings.tsx":"Retire obsolete Dock controls",
  "web/src/state/useHomeFocus.ts":"1.4.10 coalesce scroll sampling; 1.4.11 keep weekday during vertical reading and classify actual horizontal pans",
- "web/src/theme/app.css":"1.4.10 allow list scrolling from course cards; historical solid navigation and reserved content retained",
+ "web/src/theme/app.css":"2026-10-18 apply reduced motion to ::after as well as elements/::before; preserve normal switch feedback and existing layout",
  "web/src/theme/background.css":"Solid navigation preview",
  "web/src/theme/calendar.css":"Sliding month/year presentation",
  "web/src/theme/timetable.css":"Toolbar normal flow",

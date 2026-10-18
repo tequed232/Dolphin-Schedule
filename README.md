@@ -8,110 +8,19 @@
 
 Dolphin Calendar 是面向校园日常的本地课表应用。它用同一套 React 界面提供网页版和 Android 安装版：主页看课程，点击课程看教师、教室和教材，需要时再开启提醒、导航或系统日历。
 
-无需账号，没有自建业务服务器，也不自动上传课表、封面或背景。Android 的基础课表界面和资源均随 APK 内置；地图导航使用用户选择的外部地图应用。当前源码版本为 **1.5.1**，正式安装包见 [GitHub Releases](https://github.com/tequed232/Dolphin-Calendar/releases)。各版本的构建与设备验证结果见 [验证与使用说明](docs/STATUS.md)。源码仓库：[tequed232/Dolphin-Calendar](https://github.com/tequed232/Dolphin-Calendar)。
+无需账号，没有自建业务服务器，也不自动上传课表、封面或背景。Android 的基础课表界面和资源均随 APK 内置；地图导航使用用户选择的外部地图应用。当前源码版本为 **1.5.1**，正式安装包见 [GitHub Releases](https://github.com/tequed232/Dolphin-Calendar/releases)。版本变更见 [更新记录](RELEASE_NOTES.md)。源码仓库：[tequed232/Dolphin-Calendar](https://github.com/tequed232/Dolphin-Calendar)。
 
 在线使用：[Dolphin Calendar 网页版](https://tequed232.github.io/Dolphin-Calendar/)。网页版发布运行 `npm run build:pages`，入口为 `build/pages/index.html`。该入口内置编译后的界面代码和样式，图片与离线缓存文件随整个目录发布，支持 `/Dolphin-Calendar/` 子路径。不要将开发用的 `web/index.html` 单独上传。发布工作流和 Pages 发布条件见 [发布说明](docs/PUBLISHING.md)。
 
 [功能](#功能概览) · [JSON 格式](#json-课表格式) · [本地开发](#本地开发) · [架构](#工程架构) · [验证](#验证与测试) · [许可](#许可证与美术资产)
 
-## 1.5.1 插件接口与行程通知精简
+## 近期改进
 
-新增「设置 → 插件管理」：本地JSON包安装、权限确认、启停、更新、卸载、专属配置和主题管理。插件工具只在管理页由用户主动打开，退出、刷新或返回后不会自动运行；列表、平铺、搜索和原编辑流程保持原界面。开发者可以通过公开接口制作自己的课表、统计和导入转换工具，不需要修改APK。
-
-[插件开发与内置接口文档](docs/PLUGINS.md)详细介绍技术栈、包结构、API v1、课表数据、主题颜色、自定义导入、权限、生命周期、配置限额、打包、调试及完整示例。管理页可下载示例JSON；TypeScript接口见 [api.d.ts](web/src/plugins/api.d.ts)，可运行示例源码见 [pluginExample.ts](web/src/lib/pluginExample.ts)。插件转换结果交给原导入流程预览并由用户确认，不能直接改写课表。
-
-行程通知展开时课程名独立显示，完整地址只保留在下方地图按钮，移除计时、数字阶段和重复地址；收起的短楼栋标签、图标及“我到了”操作保留。验证范围见 [1.5.1记录](docs/REVIEW_1.5.1.md)。
-
-## 1.4.11 平铺滚动日期修复
-
-修复导入课表后，选择周一等日期、连续向上滑动却自动选中星期四的问题。上下滚动只更新当前日期的阅读课程或节次；实际横向平移、点选日期和点按其他日课程继续使用原导航规则。内层滚动事件没有水平位移时，不再被当作横向浏览。复现、回归、覆盖安装及交付证据见 [1.4.11 修复记录](docs/REVIEW_1.4.11.md)。
-
-## 1.4.10 项目审查与修复
-
-本轮修复选择器键盘操作与输入法裁切、详情返回焦点、课表设置慢保存中的输入覆盖；纠正分段单双周和显式空周次导入，恢复失败或损坏数据的明确反馈，减少教材封面的无用处理。更新检查处理迟到缓存和已移除正式版本，Android 导出不再把空输出流误报成功，文件写入和桥接 JSON 解析移出 UI 主线程。
-
-列表课程卡片上的上下滑动可带动列表，长内容在卡片内阅读、从边界向外滑时交给列表；多指抬起不再误切日期。临时课程更改日期立即同步星期。原生提醒按当前课程和开关校验旧事件，删除／改期／关闭后的旧提醒不再重新出现，重命名使用新信息，损坏事件不阻断合法提醒。
-
-日期索引、工作日窗口、平铺分组与滚动焦点减少重复计算，非活动课表页暂停时钟。700 门虚构课程、24 节的固定样本中，日期切换的 Date 构造约减少 97%，工作日推进约减少 98.9%；同帧滚动布局读取由 840 次合并至下一帧 14 次，同格拖动排序由 210 次降至 0。点击耗时 P50 为 84.8 → 83.5 ms，P95 为 183.3 → 184.7 ms，不能据此宣称整体帧率大幅提高。
-
-本轮获授权修复逻辑，保留原课程模型和存储结构，确实修改了相关解析、恢复及原生操作实现。本地完整浏览器回归 **34/34 组、447 条 PASS**，86 项数据／性能测试和 17 项 JVM 测试通过；原包名／原签名 **10409 → 10410** 实际覆盖升级 11 项通过，8 项 APK/Web 资源字节一致。逐项症状、根因、测试映射及设备边界见 [1.4.10 审查记录](docs/REVIEW_1.4.10.md)，线上发布按 GitHub 实际记录及交付收据核对。
-
-## 1.4.9 已发布：完整课表模板与 AI 导入教程
-
-导入页提供「CSV 完整课表模板」与「JSON 完整课表模板」：每种格式只需一份文件，同时包含课程、全部单节作息和休息时间，单节课与连堂课均有合成示例。先替换为自己的真实资料，再解析预览；已有 JSON、CSV、Excel 解析、保存与数据格式继续沿用。
-
-「向 AI 输入提示词导入课表」打开统一提示词弹框。提示词要求 AI 先询问缺失的开学日期、周次或单节边界，不能无依据平均拆分连堂总时段；用户明确确认单节时长、课间时长和适用规则后，可以按确认规则计算并核对结果。教师、教室缺失可留空，不造数据。
-
-[图文与视频教程](https://tequed232.github.io/Dolphin-Calendar/import-guide/)提供带编号文字的 ChatGPT / DeepSeek 合成示例操作图，以及 Dolphin 内提示词、粘贴、预览和确认保存的视频；[GitHub 文字版](docs/IMPORT_GUIDE.md)可直接分享。应用只打开固定 HTTPS 教程链接，不向链接附加或上传当前课表。教程源码与媒体单独位于 `docs/import-guide/`，仅 Pages 构建发布，正常应用 Web 资源与 APK 不打包这些照片或视频。
-
-正式 APK 为 **1.4.9 / 10409**，继续使用原包名与原发行签名。本地完整浏览器回归 **28/28 组、394 条 PASS**，69 项数据测试、16 项教程专项、正式与调试构建以及原签名 **10408 → 10409** 实际覆盖升级 11 项通过。范围、包哈希及验证边界见 [1.4.9 导入改进记录](docs/UI_1.4.9.md)；线上 Release、Pages 和云端结果以实际发布完成记录核对。以下 1.4.8 成绩属于历史版本，不作为本版验收。
-
-## 1.4.8 历史日课表与横屏界面精修
-
-日课表使用独立时间轴与连续课程单卡，重叠课程按时段分列；日期只显示一次，星期和课程数为次级信息。横屏将导航、竖向日期栏和课程区依次排列，手机保留横向日期条。课程色彩、长内容阅读与平铺编辑反馈同步整理，原有详情、保存、导入与数据格式继续使用。
-
-<p align="center">
-  <a href="docs/UI_1.4.8.md"><img src="docs/images/day-portrait-1.4.8.png" width="260" alt="1.4.8 手机日课表：实际日期只显示一次，编号与开始结束时间独立占位，连续课程是一张跨节卡片" /></a>
-  <a href="docs/UI_1.4.8.md"><img src="docs/images/day-landscape-1.4.8.png" width="720" alt="1.4.8 横屏日课表：最左导航、中间竖向日期栏、右侧时间轴与跨节课程区平行排列" /></a>
-</p>
-<p align="center">
-  <a href="docs/UI_1.4.8.md"><img src="docs/images/grid-dark-1.4.8.png" width="800" alt="1.4.8 深色平铺：低饱和课程表面和浅色文字，连续课程跨节显示，原课程编辑入口保留" /></a>
-</p>
-
-*以上为 1.4.8 当前源码的实际验证画面，课程、教师和地点均为合成演示数据。Android 使用 WebView 外的原生导航，竖屏置底、横屏及宽屏置于侧边；网页按相同方向独立占位。点击图片查看 [界面与升级记录](docs/UI_1.4.8.md)。*
-
-发行版本为 **1.4.8 / 10408**，沿用原包名与原发行签名。完整本地 CI **27/27 组、378 条 PASS**，最终正式／调试 APK 构建、原签名覆盖升级 11 项和正式原生导航 11 项及 Debug WebView 22 项已通过。范围、配置、最终包哈希及验收见 [1.4.8 界面记录](docs/UI_1.4.8.md)。本版入口为 [v1.4.8 Release](https://github.com/tequed232/Dolphin-Calendar/releases/tag/v1.4.8)，线上发布按 GitHub 实际状态及交付包发布完成记录核对。历史 1.4.7 保留在下文。
-
-## 1.4.7 历史日期与时间布局完善
-
-宽屏日期条限制在合适宽度，避免日期间隙过大；上课时间为节次标签保留完整空间，两个时间输入更紧凑，并适应手机、横屏及较大字体。应用实现只改对应 CSS，日期选择、时间输入与保存、自动顺延和导入业务继续沿用。
-
-<p align="center">
-  <a href="docs/UI_1.4.7.md"><img src="docs/images/date-strip-wide-1.4.7.png" width="800" alt="1.4.7 宽屏日期条：七张日卡保持紧凑间距，选中日期完整显示" /></a>
-</p>
-<p align="center">
-  <a href="docs/UI_1.4.7.md"><img src="docs/images/time-settings-wide-1.4.7.png" width="550" alt="1.4.7 宽屏上课时间：节次标签完整，两个时间输入保持紧凑" /></a>
-  <a href="docs/UI_1.4.7.md"><img src="docs/images/time-settings-narrow-1.4.7.png" width="230" alt="1.4.7 手机 390×844、135% 缩放：节次标签在上方，开始和结束时间并列且无重叠" /></a>
-</p>
-
-*以上为 1.4.7 本轮实际验证画面，使用合成课表。点击图片查看 [布局与覆盖升级记录](docs/UI_1.4.7.md)。*
-
-发行版本为 **1.4.7 / 10407**，沿用原包名与原发行签名，保留历史版本。完整本地 CI 24/24 组、316 条 PASS，正式／调试 APK 构建及原签名 10406→10407 覆盖升级已通过；完整证据及在线核对方式见 [1.4.7 布局记录](docs/UI_1.4.7.md)。发布入口为 [v1.4.7 Release](https://github.com/tequed232/Dolphin-Calendar/releases/tag/v1.4.7)，发布后按 GitHub 实际状态及交付包发布完成记录核对。
-
-## 1.4.6 历史年份控件完善
-
-月历展开后的年份选择合并为一套控件：可以直接输入年份、点击左右箭头，或在同一区域左右拖动切年；月份选择和月历翻月继续保留。沿用 1.4.5 的实体导航与横竖屏布局，课表业务及数据格式继续保持。
-
-<p align="center">
-  <a href="docs/UI_1.4.6.md"><img src="docs/images/calendar-year-1.4.6.png" width="260" alt="1.4.6 竖屏月历：一套年份控件支持输入、左右箭头与滑动，右侧保留月份选择" /></a>
-  <a href="docs/UI_1.4.6.md"><img src="docs/images/calendar-landscape-1.4.6.png" width="540" alt="1.4.6 横屏月历：年份与月份选择在左侧，日期和回到今天完整可用" /></a>
-</p>
-
-*1.4.6 实际验证画面，使用合成课表。点击图片查看 [年份控件与界面升级说明](docs/UI_1.4.6.md)。*
-
-本版版本为 **1.4.6 / 10406**，沿用原包名与原发行签名，保留已发布的 1.4.5。本版完整本地 CI 22/22 组、286 条 PASS，正式 APK 构建与原签名覆盖升级已通过。实际验证及在线核对方式见 [1.4.6 年份控件与升级记录](docs/UI_1.4.6.md)；发行入口为 [v1.4.6 Release](https://github.com/tequed232/Dolphin-Calendar/releases/tag/v1.4.6)，发布后按 GitHub 实际状态与交付包的发布完成记录核对。
-
-## 1.4.5 历史界面改造
-
-顶部课表工具栏与课程网格分开占位，修复星期和课程被浮窗遮挡；月历支持左右连续拖动翻月、跨年，以及展开年月区后的年份滑动条切年。竖屏使用实体底部导航，横屏及宽屏使用侧栏。Android 导航采用 WebView 外的原生 View，网页使用对应布局，课程详情、弹层、二级任务和输入法期间隐藏导航。
-
-本轮允许修改界面实现，继续保留课表业务和本地数据格式。正式包沿用原包名与原签名，版本码 **10405**，支持覆盖旧正式版。界面、配置、兼容范围及验证状态见 [1.4.5 UI 改造记录](docs/UI_1.4.5.md)；最新已发布附件见 [Releases](https://github.com/tequed232/Dolphin-Calendar/releases)。
-
-## 1.4.4 历史变更与交付包对比
-
-本版从作者提供的 2026-10-08 交付包同步现有功能实现，并重新编译为可覆盖旧正式版的 APK；交付包自带的 1.4.3 调试 APK 不用于正式发行。对比基准是线上 1.4.3 的 `7f2a657`。本次不改写功能实现，只调整发行版本及文档、验证配置。
-
-- 底栏改为 **列表 / 平铺 / 搜索 / 设置**；列表与七天网格共用课表和阅读焦点，平铺支持长按移动及上下调整节次。
-- 文件导入支持 **JSON / CSV / XLS / XLSX**，依次识别、校验、预览和确认；兼容工作表选择、合并单元格、课程及逐节时间模板。
-- “课表管理”统一学期、每日节数、上下课时间、午休与课程；缺省导入配置保留当前值，临时课程可绑定实际日期。
-- 当前时间线默认开启，可在外观中关闭；平铺顶部玻璃浮窗下滑收起、上滑显示。
-- 网页增加正式 Release 的每日/手动检查与缓存；应用内 APK 下载继续仅在 Android 提供。
-
-正式 APK 使用 `com.dolphin.calendar`、原发行签名和递增版本码 **10404**。请直接覆盖安装，保留应用数据；网页与 APK 数据仍各自独立。下载见 [v1.4.4 Release](https://github.com/tequed232/Dolphin-Calendar/releases/tag/v1.4.4)，配置与文件级差异见 [发行对比记录](docs/RELEASE_1.4.4_AUDIT.md)，本轮验证见 [STATUS.md](docs/STATUS.md)。
-
-Release 和 Pages 已发布，线上附件、完整标签 CI 与页面核对结果见 [发布完成记录](docs/PUBLICATION_1.4.4.md)。
-
-1.4.4 发布时的 123 项交付包哈希基线仍保留。当前 `node scripts/check-delivery-integrity.mjs` 列明本轮获授权的 UI 修改和删除，继续严格验证其余应用源码与资源；它不再声称本轮全部源码未改变。
+- 学校名称与台词采用即时草稿和合并保存，保存失败时保留输入并提供重试。
+- 多窗口保存使用数据库事务；导入预览、课程与教材编辑会检查旧草稿，并明确提示重新读取。
+- 导入模块按需加载；文件重新预览保留工作表、手动映射和已确认的日期。
+- 提醒同步保留待触发批次，系统日历复原保留课程的隐藏状态。
+- 插件通过独立管理入口运行，权限、配置与主题接口见 [插件开发文档](docs/PLUGINS.md)。
 
 ## 功能概览
 
@@ -283,7 +192,7 @@ macOS / Linux 使用 `./gradlew` 替换 `.\gradlew.bat`。Windows 也可以运�
 pwsh -File scripts/check-release.ps1 -PreviousApk "旧版正式 APK 的路径"
 ```
 
-公开身份与证书指纹保存在 [release-identity.json](release-identity.json)，不含私钥。校验脚本需要 Android SDK Build Tools **36.0.0**；可通过 `-SdkRoot` 指定 SDK 路径。`npm run deliver` 是 Windows 本地交付辅助脚本，需要先构建已签名的 release APK；它不执行 GitHub 发布。本次正式发行按 [发布说明](docs/PUBLISHING.md) 从对应发行 Git 提交归档源码，并单独核对本轮验证附件。
+公开身份与证书指纹保存在 [release-identity.json](release-identity.json)，不含私钥。校验脚本需要 Android SDK Build Tools **36.0.0**；可通过 `-SdkRoot` 指定 SDK 路径。`npm run deliver` 是 Windows 本地交付辅助脚本，需要先构建已签名的 release APK；它不执行 GitHub 发布。打包流程见 [发布说明](docs/PUBLISHING.md)，源码从已提交的 Git 版本归档。
 
 ## 工程架构
 
@@ -342,67 +251,23 @@ app/src/main/
   java/com/dolphin/calendar/   Kotlin 宿主、提醒、通知和日历
   res/                        Android 资源与图标
 scripts/          构建、验证、设备检查与交付
-docs/             功能边界、维护与验证说明
+docs/             用户指南、开发接口、维护与发布文档
 legal/            第三方许可证全文
 ```
 
 ## 验证与测试
 
-基础检查不要求连接设备：
+基础检查与完整浏览器回归：
 
 ```powershell
 npm run build
 npm run check
-npm test
-node scripts/check-delivery-integrity.mjs
+node scripts/ci.mjs
 ```
 
-浏览器交互检查需要在另一个终端保持 `npm run dev` 运行：
+完整浏览器回归自行启动 5173 端口的服务；运行前停止占用该端口的开发服务。测试可使用本机 Chrome / Edge，或通过 `CHROME_PATH` 指定浏览器。Android 测试使用明确指定的独立模拟器，操作前阅读脚本的备份与恢复逻辑。
 
-```powershell
-npm run check:ui
-node scripts/check-responsive-navigation.mjs
-node scripts/check-calendar-swipe.mjs
-node scripts/check-date-strip-spacing.mjs
-node scripts/check-date-rail.mjs
-node scripts/check-day-timetable-layout.mjs
-node scripts/check-course-theme.mjs
-node scripts/check-time-settings-layout.mjs
-node scripts/check-current-time-line.mjs
-node scripts/check-toolbar-import.mjs
-node scripts/check-primary-navigation.mjs
-node scripts/check-file-times-ui.mjs
-node scripts/check-home-interaction.mjs
-node scripts/check-schedule-ui.mjs
-node scripts/check-onboarding.mjs
-node scripts/check-experience.mjs
-node scripts/check-home-search-experience.mjs
-node scripts/check-course-experience.mjs
-node scripts/check-import-ui.mjs
-node scripts/check-background.mjs
-node scripts/check-calendar-picker.mjs
-node scripts/check-holidays.mjs
-node scripts/check-master-glass.mjs
-node scripts/check-offline.mjs
-```
-
-这些流程覆盖首次引导、草稿离开保护、空状态、搜索、导入取消与错误恢复、日期选择、背景、节假日、离线和持久化。结构守卫还会修改关键实现并确认检查能拒绝错误变体。`npm run check` 包含源码准入、历史交付包范围检查、工程及资产检查与两份 TypeScript 测试；单独执行一致性命令便于复核本次同步边界。测试优先使用本机已有 Chrome / Edge，可设置 `CHROME_PATH` 指定浏览器，或设置 `TEST_URL` 指向其他已启动的本地服务。
-
-`node scripts/ci.mjs` 会启动自己的开发服务并顺序运行 24 组浏览器检查，运行前停止已占用 5173 端口的服务。Pages 另执行 `npm run build:pages` 与 `node scripts/check-pages.mjs`，检查项目子路径、旧缓存升级、导入持久化和离线回退。网页默认自动检查版本，离线及 Pages 验证只允许访问本仓库官方 Release API；这项可选请求不传送课表数据。
-
-导入链路默认使用仓库内的合成旧格式数据，不依赖作者桌面的旧项目。需要额外核对旧版 `schedule.ts` 时，可显式设置 `LEGACY_SCHEDULE_PATH` 后运行 `check-import-ui.mjs`；真实课表样本不进入发布用源码。
-
-完整引导的双击离线检查需先构建：
-
-```powershell
-$env:TEST_OFFLINE = '1'
-node scripts/check-onboarding.mjs
-Remove-Item Env:TEST_OFFLINE
-```
-
-Android 当前导航检查为 `scripts/check-native-navigation.mjs`，实际覆盖升级为 `scripts/check-release-upgrade.mjs`；使用明确指定的独立模拟器，参数和合成样本准备见脚本。旧 `check-dock-device.mjs`、`check-keyboard-device.mjs`、`check-background-device.mjs`、`check-holidays-device.mjs`、`check-device.mjs`、`check-android-interaction.mjs` 和 `check-liquid-modes.mjs` 对应历史透明 Dock/玻璃流程，不能用作 1.4.5 证据；复现历史行为请检出相应旧标签。请先阅读各脚本的备份、恢复与设备选择逻辑，勿将测试当作普通使用流程。结构化结果与截图写入 `build/evidence/`，Android lint 报告位于 `app/build/reports/`。
-
-仓库提供 [GitHub Actions 验证工作流](.github/workflows/verify.yml)，执行网页构建、基础及浏览器检查、Android debug 构建、JVM 单元测试和 lint；构建产物不提交到仓库，也不上传为普通验证工作流附件。[Pages 工作流](.github/workflows/static.yml) 单独检查历史交付包哈希与明确 UI 变更范围、构建并验证 `build/pages`，随后上传专用 Pages 部署附件。某个版本是否通过、是否有对应实机证据，以 [STATUS.md](docs/STATUS.md) 及其记录为准。
+Pages 使用 `npm run build:pages` 和 `node scripts/check-pages.mjs` 检查子路径资源、缓存升级、导入持久化与离线回退。[GitHub Actions](.github/workflows/verify.yml) 执行网页、浏览器和 Android 检查。日志、截图、设备备份与运行报告只保存在被忽略的本地输出目录中。
 
 ### 已知边界
 

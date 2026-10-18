@@ -340,7 +340,7 @@ body{background:var(--desktop)}
 .greeting h1{margin-bottom:10px}
 .sub-header{margin-bottom:15px}}
 @media(prefers-reduced-motion:reduce){
-*,*::before{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
 @property --back-progress{syntax:"<number>";inherits:false;initial-value:0}
 .date-chips>button{color:var(--accent);min-width:44px;min-height:44px}
 .brand-art{object-fit:contain;aspect-ratio:1;flex-shrink:0;border-radius:22%}
