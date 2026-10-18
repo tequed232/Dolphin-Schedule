@@ -7,13 +7,17 @@ import {useDiscardGuard} from '../lib/useDiscardGuard';
 import {Dialog} from './Dialog';
 import {ChoiceSelect} from './ChoiceSelect';
 import {UnsavedChanges} from './UnsavedChanges';
+import {assertUnchanged,EditConflictError,latestData,sameValue} from '../lib/editConflicts';
+import {EditConflictNotice} from './EditConflictNotice';
 
 type Errors={name?:string;periods?:string;weeks?:string;save?:string};
+class CourseTimeConflictError extends Error {constructor(readonly courses:Course[]){super(`该时间段与「${courses.map(c=>c.name).join('、')}」冲突。`);}}
 export function CourseEditor({course,onClose,seed}:{course:Course|null;onClose:()=>void;seed?:Partial<Course>}){
   const {data,update,toast}=useApp();
-  const [initial]=useState<Course>(()=>course??{id:crypto.randomUUID(),name:'',teacher:'',room:'',day:1,start:1,end:Math.min(2,data.schedule.periods.length),weeks:Array.from({length:data.schedule.term.weeks},(_,i)=>i+1),color:'sage',notes:'',...seed});
+  const [initial,setInitial]=useState<Course>(()=>course??{id:crypto.randomUUID(),name:'',teacher:'',room:'',day:1,start:1,end:Math.min(2,data.schedule.periods.length),weeks:Array.from({length:data.schedule.term.weeks},(_,i)=>i+1),color:'sage',notes:'',...seed});
   const [draft,setDraft]=useState(initial),[weeks,setWeeks]=useState(compactWeeks(initial.weeks)),[errors,setErrors]=useState<Errors>({}),[confirmDelete,setConfirmDelete]=useState(false),[confirmConflict,setConfirmConflict]=useState(false),[busy,setBusy]=useState(false);
   const lock=useRef(false),nameInput=useRef<HTMLInputElement>(null),weeksInput=useRef<HTMLInputElement>(null),periodFields=useRef<HTMLDivElement>(null),id=useId();
+  const confirmedConflicts=useRef<Course[]|null>(null),[conflict,setConflict]=useState('');
   const dirty=JSON.stringify(draft)!==JSON.stringify(initial)||weeks!==compactWeeks(initial.weeks),guard=useDiscardGuard(dirty,onClose,busy);
   function patch(key:keyof Course,value:string|number){setDraft(d=>({...d,[key]:value}));setErrors(current=>({...current,[key==='start'||key==='end'?'periods':key]:undefined,save:undefined}));}
   function changeDate(value:string){
@@ -22,6 +26,7 @@ export function CourseEditor({course,onClose,seed}:{course:Course|null;onClose:(
   }
   async function save(allowConflict=false){
     if(lock.current)return false;
+    if(course&&!sameValue(initial,data.schedule.courses.find(c=>c.id===initial.id))){setConflict(new EditConflictError('这门课程',!data.schedule.courses.some(c=>c.id===initial.id)).message);return false;}
     const next:Errors={};let parsed:number[]=[];
     if(!draft.name.trim())next.name='请填写课程名称，例如“大学英语”。';
     if(!Number.isInteger(draft.start)||!Number.isInteger(draft.end)||draft.start<1||draft.end>data.schedule.periods.length)next.periods='请选择当前课表中的上课节次。';
@@ -34,27 +39,38 @@ export function CourseEditor({course,onClose,seed}:{course:Course|null;onClose:(
     }
     const savedDraft={...draft,weeks:parsed,...(draft.specificDate?{day:((parseDate(draft.specificDate).getDay()+6)%7)+1}:{})};
     const conflicts=data.schedule.courses.filter(c=>coursesConflict(savedDraft,c,data.schedule.term.startDate));
-    if(conflicts.length&&!allowConflict){setErrors({save:`该时间段与「${conflicts.map(c=>c.name).join('、')}」冲突。`});setConfirmConflict(true);return false;}
+    if(conflicts.length&&!allowConflict){confirmedConflicts.current=conflicts;setErrors({save:new CourseTimeConflictError(conflicts).message});setConfirmConflict(true);return false;}
     lock.current=true;setBusy(true);
     try{
       await update(s=>{
-        const name=draft.name.trim(),courses=[...s.schedule.courses.filter(c=>c.id!==draft.id),{...savedDraft,name}];
+        if(course)assertUnchanged(initial,s.schedule.courses.find(c=>c.id===initial.id),'这门课程');
+        if(savedDraft.start<1||savedDraft.end>s.schedule.periods.length)throw new EditConflictError('课表节次');
+        let currentWeeks:number[];
+        try{currentWeeks=draft.specificDate?[Math.max(1,weekOf(parseDate(draft.specificDate),s.schedule.term.startDate))]:parseNumbers(weeks,s.schedule.term.weeks,'周次');}catch{throw new EditConflictError('学期周次');}
+        const latestDraft={...savedDraft,weeks:currentWeeks},currentConflicts=s.schedule.courses.filter(c=>coursesConflict(latestDraft,c,s.schedule.term.startDate));
+        if(currentConflicts.length&&(!allowConflict||!sameValue(confirmedConflicts.current,currentConflicts)))throw new CourseTimeConflictError(currentConflicts);
+        const name=draft.name.trim(),courses=[...s.schedule.courses.filter(c=>c.id!==draft.id),{...latestDraft,name}];
         let books=s.books;
-        if(course&&course.name!==name&&s.books[course.name]&&!s.books[name]){
-          books={...s.books,[name]:s.books[course.name]};
-          if(!courses.some(item=>item.name===course.name))delete books[course.name];
+        if(course&&initial.name!==name&&s.books[initial.name]&&!s.books[name]){
+          books={...s.books,[name]:s.books[initial.name]};
+          if(!courses.some(item=>item.name===initial.name))delete books[initial.name];
         }
         return {...s,books,schedule:{...s.schedule,courses}};
       });
       toast('课程已保存');onClose();return true;
-    }catch(e){setErrors({save:`保存未完成：${(e as Error).message}。修改仍在这里，请重试。`});return false;}
+    }catch(e){if(e instanceof EditConflictError){setConflict(e.message);setErrors({});}else if(e instanceof CourseTimeConflictError){confirmedConflicts.current=e.courses;setErrors({save:e.message});setConfirmConflict(true);}else setErrors({save:`保存未完成：${(e as Error).message}。修改仍在这里，请重试。`});return false;}
     finally{lock.current=false;setBusy(false);}
   }
   async function remove(){
     if(lock.current)return;lock.current=true;setBusy(true);
-    try{await update(s=>({...s,schedule:{...s.schedule,courses:s.schedule.courses.filter(c=>c.id!==draft.id)}}));toast('课程已删除');onClose();}
-    catch(e){setErrors({save:`删除未完成：${(e as Error).message}。请重试。`});setConfirmDelete(false);}
+    try{await update(s=>{assertUnchanged(initial,s.schedule.courses.find(c=>c.id===initial.id),'这门课程');return {...s,schedule:{...s.schedule,courses:s.schedule.courses.filter(c=>c.id!==draft.id)}};});toast('课程已删除');onClose();}
+    catch(e){if(e instanceof EditConflictError)setConflict(e.message);else setErrors({save:`删除未完成：${(e as Error).message}。请重试。`});setConfirmDelete(false);}
     finally{lock.current=false;setBusy(false);}
+  }
+  async function reload(){
+    if(lock.current)return;lock.current=true;setBusy(true);
+    try{const current=await latestData(update),value=current.schedule.courses.find(c=>c.id===initial.id);if(!value)throw new EditConflictError('这门课程',true);setInitial(value);setDraft(value);setWeeks(compactWeeks(value.weeks));setErrors({});setConflict('');confirmedConflicts.current=null;setConfirmConflict(false);}
+    catch(e){setConflict((e as Error).message);}finally{lock.current=false;setBusy(false);}
   }
   const periodChoices=data.schedule.periods.map((period,index)=>({value:index+1,label:`第 ${period.label??index+1} 节`}));
   return <><Dialog open title={course?'编辑课程':draft.temporary?'添加临时课程':'添加课程'} onClose={guard.requestClose}>
@@ -80,7 +96,7 @@ export function CourseEditor({course,onClose,seed}:{course:Course|null;onClose:(
     <p className="book-field-help" id={`${id}-weeks-help`}>已默认选择本学期全部 {data.schedule.term.weeks} 周。可填写“1-16”“1,3,5”或“1-16单”。</p>
     </>}
     </fieldset>
-    {errors.save&&<p role="alert" className="danger">{errors.save}</p>}
+    {conflict&&<EditConflictNotice message={conflict} busy={busy} onReload={reload}/>}{errors.save&&<p role="alert" className="danger">{errors.save}</p>}
     <footer className="editor-actions"><div className="button-row"><button type="button" className="secondary" disabled={busy} onClick={guard.requestClose}>取消</button><button type="submit" className="primary" disabled={busy}>{busy?'正在保存…':'保存课程'}</button></div>{course&&<button type="button" className="text-button danger editor-delete" disabled={busy} onClick={()=>setConfirmDelete(true)}>{draft.temporary?'删除临时课程':'删除课程'}</button>}</footer>
     </form>
   </Dialog>
