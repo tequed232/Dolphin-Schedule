@@ -15,7 +15,13 @@ const pluginState=()=>page.evaluate(async()=>{const {loadPluginState}=await impo
 const appState=()=>page.evaluate(async()=>{const {loadData}=await import('/src/lib/storage.ts');return loadData();});
 async function manager(){await goTab(page,'设置');await active().locator('[data-setting="plugins"]').click();await active().locator('.plugin-manager').waitFor();}
 async function choose(label,name){await active().getByRole('button',{name:label,exact:true}).click();await active().getByRole('option',{name,exact:true}).click();await page.waitForTimeout(120);}
-async function openTool(){await active().getByRole('button',{name:'打开插件工具',exact:true}).click();await frame().locator('#date').waitFor();}
+async function openTool(){
+  await active().getByRole('button',{name:'打开插件工具',exact:true}).click();
+  await frame().locator('#date').filter({hasText:/^\d{4}-\d{2}-\d{2}$/}).waitFor();
+  // The initial heading exists before SDK data inserts courses above the controls.
+  await frame().locator('#courses > *').first().waitFor();
+  await frame().locator('body').evaluate(()=>document.fonts.ready);
+}
 async function inspect(pkg){await active().locator('.plugin-source').evaluate(element=>element.open=true);await active().getByLabel('插件源码',{exact:true}).fill(JSON.stringify(pkg));await active().getByRole('button',{name:'查看插件信息与权限',exact:true}).click();}
 let baseline,themeBase;
 try{
