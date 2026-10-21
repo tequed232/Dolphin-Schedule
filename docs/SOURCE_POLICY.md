@@ -8,6 +8,8 @@
 
 [source-policy.json](../source-policy.json) 维护允许路径、允许模式、禁止目录、禁止文件类型和完整源码的必需文件。未知类型默认拒绝，禁止规则优先；唯一 JAR 例外是 `gradle/wrapper/gradle-wrapper.jar`。符号链接、子模块和特殊文件不准入。
 
+已移除的旧产品图片可在 `retiredResources` 中按具体路径和 Git blob ID 登记，仅用于推送历史审核。当前提交树、暂存区和独立源码目录仍拒绝这些文件；历史同名文件内容变化、符号链接及审查证明文档也不能获得豁免。这些登记不会复制或重新上传资源。
+
 公开导入教程位于 `docs/import-guide`，HTML、样式、脚本、合成样本及标注图均按具体文件准入。唯一允许的视频是 `docs/import-guide/import-demo.webm`，必须有 EBML 文件头与 WebM DocType，最大 20 MB；两张指定 JPEG 与三张指定 PNG 必须具有对应文件头及结尾标记，最大各 5 MB。其他视频、未列出的教程资源以及 App 内置教程媒体路径仍被拒绝。暂存、提交及推送历史检查读取实际 Git blob，工作树中的另一份媒体不能替代检查对象。浏览器验收另外确认真实媒体可加载、视频可解码。
 
 教程只部署到 GitHub Pages；构建生成的 `prompt.txt`、`schedule.csv`、`schedule.json` 位于 Pages 输出中，不作为源码入库。转换提示词复用应用中的统一常量，公开示例与演示资料均为合成内容。

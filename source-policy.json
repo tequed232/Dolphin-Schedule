@@ -232,5 +232,15 @@
     "gradlew.bat",
     "gradle/wrapper/gradle-wrapper.properties",
     "gradle/wrapper/gradle-wrapper.jar"
+  ],
+  "retiredResources": [
+    {
+      "path": "docs/images/home-demo.png",
+      "blob": "fc462e6870015877f3baae788626f9109cb79d7e"
+    },
+    {
+      "path": "docs/images/onboarding.png",
+      "blob": "f781958eed83b736eb793353a0249a4f921fbf29"
+    }
   ]
 }
