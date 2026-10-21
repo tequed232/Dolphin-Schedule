@@ -23,6 +23,21 @@ function range(tip,baseline){
   if(baseline.length)args.push('--not',...baseline);
   return git(args).split('\n').filter(Boolean);
 }
+function sharedBaseline(remote,tip,targetRef){
+  // Only the live default branch is trusted; local tracking refs and other
+  // remote feature branches must not hide newly introduced artifacts.
+  const advertised=spawnSync('git',['ls-remote','--symref',remote,'HEAD'],{encoding:'utf8'});
+  if(advertised.status!==0)return [];
+  const defaultRef=advertised.stdout.match(/^ref: (refs\/heads\/\S+)\s+HEAD$/m)?.[1];
+  const head=advertised.stdout.match(/^([a-f0-9]+)\s+HEAD$/m)?.[1];
+  if(!defaultRef||defaultRef===targetRef||!head||!sha.test(head))return [];
+  if(spawnSync('git',['cat-file','-e',`${head}^{commit}`],{stdio:'ignore'}).status!==0){
+    const fetched=spawnSync('git',['fetch','--no-tags','--no-write-fetch-head',remote,head],{encoding:'utf8'});
+    if(fetched.status!==0)return [];
+  }
+  const common=spawnSync('git',['merge-base',tip,head],{encoding:'utf8'});
+  const base=common.stdout?.trim();return common.status===0&&sha.test(base)?[base]:[];
+}
 function selfTest(){
   const original=process.cwd(),root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
   const temp=mkdtempSync(path.join(os.tmpdir(),'dolphin-source-history-'));
@@ -54,6 +69,20 @@ function selfTest(){
     result=spawnSync(process.execPath,['scripts/check-source-push.mjs','origin'],{encoding:'utf8',input:`refs/heads/new ${tip} refs/heads/new ${'0'.repeat(40)}\n`});
     if(result.status===0||!result.stderr.includes(bad))throw new Error('过期远端跟踪引用绕过了新分支历史检查');
     console.log('PASS 新分支忽略过期远端跟踪引用，完整历史中的 APK 仍被拒绝');
+    const remote=path.join(temp,'shared.git');git(['init','--bare','--initial-branch=main',remote]);
+    git(['checkout','--quiet','--detach',baseline]);
+    mkdirSync(path.join(temp,'docs'),{recursive:true});writeFileSync(path.join(temp,'docs/historical-review.md'),'old shared document');
+    git(['add','docs/historical-review.md']);const shared=commit('synthetic previously shared document');
+    git(['push','--quiet',remote,`${shared}:refs/heads/main`]);git(['rm','--quiet','docs/historical-review.md']);const clean=commit('synthetic source cleanup');
+    const prepush=ref=>spawnSync(process.execPath,['scripts/check-source-push.mjs',remote],{encoding:'utf8',input:`refs/heads/feature ${ref} refs/heads/feature ${'0'.repeat(40)}\n`});
+    result=prepush(clean);if(result.status!==0)throw new Error('新分支错误重审已共享主分支的历史材料，阻断清理后的源码');
+    console.log('PASS 新分支使用实时默认分支的共同祖先，允许移除旧文档后的干净源码');
+    git(['push','--quiet',remote,`${bad}:refs/heads/decoy`]);result=prepush(tip);
+    if(result.status===0||!result.stderr.includes(bad))throw new Error('远端非默认分支掩盖了新增 APK 历史');
+    console.log('PASS 非默认远端分支不能成为新增禁入文件的豁免基线');
+    git(['remote','add','origin',remote]);writeFileSync(eventPath,JSON.stringify({before:'0'.repeat(40),ref:'refs/heads/feature'}));
+    result=run();if(result.status!==0)throw new Error('新分支 CI 未使用实时共享基线');
+    console.log('PASS 新分支 CI 与 pre-push 使用相同的实时共享基线');
   }finally{
     process.chdir(original);
     const target=path.resolve(temp),prefix=path.resolve(os.tmpdir())+path.sep;
@@ -68,7 +97,8 @@ try{
     const tip=git(['rev-parse','HEAD']);
     const event=process.env.GITHUB_EVENT_PATH?JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')):{};
     const baseline=event.pull_request?.base?.sha??event.before;
-    for(const ref of range(tip,baseline&&sha.test(baseline)&&!zero.test(baseline)?[baseline]:[]))commits.add(ref);
+    const shared=baseline&&sha.test(baseline)&&!zero.test(baseline)?[baseline]:sharedBaseline('origin',tip,event.ref);
+    for(const ref of range(tip,shared))commits.add(ref);
   }else{
     const remote=process.argv[2];
     if(!remote||remote.startsWith('-'))throw new Error('缺少目标远端名称');
@@ -77,7 +107,7 @@ try{
       const fields=line.trim().split(/\s+/),tip=fields[1],before=fields[3];
       if(fields.length!==4||!sha.test(tip)||!sha.test(before))throw new Error('无效的 Git 推送条目');
       if(zero.test(tip))continue;
-      const baseline=!zero.test(before)?[before]:[];
+      const baseline=!zero.test(before)?[before]:sharedBaseline(remote,tip,fields[2]);
       for(const ref of range(tip,baseline))commits.add(ref);
     }
   }

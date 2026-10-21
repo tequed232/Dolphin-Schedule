@@ -30,9 +30,14 @@ function preparePolicy(raw){
     if(resource.mime==='video/webm'&&!resource.path.endsWith('.webm')||resource.mime==='image/jpeg'&&!resource.path.endsWith('.jpg')||resource.mime==='image/png'&&!resource.path.endsWith('.png'))throw new Error('教程资源路径扩展名与 MIME 不一致');
     resources.set(resource.path.toLowerCase(),resource);
   }
+  const retired=new Map();
+  for(const resource of raw.retiredResources??[]){
+    if(!resource||!/^docs\/images\/[^/]+\.png$/.test(resource.path)||!/^[a-f0-9]{40}$/.test(resource.blob)||raw.allowedPaths.includes(resource.path)||retired.has(resource.path))throw new Error('退休产品资源须声明独立的 PNG 路径与精确 Git blob ID');
+    retired.set(resource.path,resource.blob);
+  }
   return {...raw,allowed:new Set(raw.allowedPaths.map(value=>value.toLowerCase())),binary:new Set(raw.allowedBinaryPaths.map(value=>value.toLowerCase())),
     directories:new Set(raw.deniedDirectoryNames.map(value=>value.toLowerCase())),names:new Set(raw.deniedFileNames.map(value=>value.toLowerCase())),
-    allow:raw.allowedPatterns.map(glob),deny:raw.deniedPatterns.map(glob),legacy:raw.legacyTrackedPatterns.map(glob),resources};
+    allow:raw.allowedPatterns.map(glob),deny:raw.deniedPatterns.map(glob),legacy:raw.legacyTrackedPatterns.map(glob),resources,retired};
 }
 function resourceError(bytes,resource){
   if(!Buffer.isBuffer(bytes)||!bytes.length||bytes.length>resource.maxBytes)return '教程媒体为空或超过逐文件大小上限';
@@ -102,7 +107,7 @@ function walk(directory){
   }
   visit(directory);return entries;
 }
-function validate(entries,policy,{legacy=new Set(),required=false,worktree,readContent,fullEntries=entries}={}){
+function validate(entries,policy,{legacy=new Set(),required=false,worktree,readContent,fullEntries=entries,history=false}={}){
   const errors=[],warnings=[],names=new Set();
   const paths=new Map();
   for(const entry of fullEntries){
@@ -115,6 +120,8 @@ function validate(entries,policy,{legacy=new Set(),required=false,worktree,readC
   }
   for(const entry of entries){
     names.add(entry.name);let reason=pathError(entry.name,policy);
+    // Historical product bytes do not become admissible in a current tree or index.
+    if(history&&reason==='文件不在源码准入允许列表中'&&entry.mode==='100644'&&policy.retired.get(entry.name)===entry.oid)reason=null;
     if(entry.unmerged)reason='Git 索引存在未解决的合并条目';
     if(!['100644','100755'].includes(entry.mode))reason='符号链接、子模块或特殊文件禁止进入发布源码';
     if(worktree&&!reason){
@@ -179,7 +186,7 @@ function selfTest(policy){
   test(Boolean(resourceError(Buffer.concat([image,Buffer.from('payload')]),jpeg)),'JPEG 末尾追加载荷被拒绝');
   const pngResource=policy.resources.get('docs/import-guide/app-import-step.png'),png=Buffer.concat([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0,0,0,13,0x49,0x48,0x44,0x52]),Buffer.alloc(17),Buffer.from([0,0,0,0,0x49,0x45,0x4e,0x44,0xae,0x42,0x60,0x82])]);
   test(!resourceError(png,pngResource),'逐路径 PNG 文件头与 IEND 通过');test(Boolean(resourceError(Buffer.from('not png'),pngResource)),'改名为 PNG 的文字被拒绝');test(Boolean(resourceError(Buffer.concat([png,Buffer.from('payload')]),pngResource)),'PNG 末尾追加载荷被拒绝');
-  for(const name of ['app-debug.apk','docs/images/app.zip','web/src/unsafe.jar','app/build/source.kt','web/node_modules/source.ts','app/src/main/assets/web/index.html','.idea/misc.xml','.run/run.xml','signing.local.properties','web/src/config.key','web/src/state.sqlite-wal','Dolphin Calendar全量提示词.txt'])test(Boolean(pathError(name,policy)),`拒绝 ${name}`);
+  for(const name of ['app-debug.apk','docs/images/app.zip','web/src/unsafe.jar','app/build/source.kt','web/node_modules/source.ts','app/src/main/assets/web/index.html','.idea/misc.xml','.run/run.xml','signing.local.properties','web/src/config.key','web/src/state.sqlite-wal','Dolphin Calendar全量提示词.txt','docs/BUSINESS_UX_AUDIT.md','docs/STATUS.md','docs/REVIEW_1.5.1.md','docs/images/validation.png','docs/new-report.md','reports/result.json','web/src/evidence/report.json'])test(Boolean(pathError(name,policy)),`拒绝 ${name}`);
   for(const name of ['legal/Dolphin Calendar全量提示词.txt','web/src/con.ts','web/src/AUX.json','web/src/COM1.ts'])test(Boolean(pathError(name,policy)),`拒绝 ${name}`);
   test(validate([{name:'web/src/Foo.ts',mode:'100644'},{name:'web/src/foo.ts',mode:'100644'}],policy).errors.some(error=>error.includes('大小写冲突')),'拒绝文件名大小写冲突');
   test(validate([{name:'web/src/Folder/a.ts',mode:'100644'},{name:'web/src/folder/b.ts',mode:'100644'}],policy).errors.some(error=>error.includes('大小写冲突')),'拒绝目录大小写冲突');
@@ -196,6 +203,17 @@ function selfTest(policy){
       return validate(entries.filter(entry=>changes.has(entry.name)),policy,{readContent});
     };
     add('web/src/index-only.ts');test(staged().errors.length===0&&!existsSync(path.join(temp,'web/src/index-only.ts')),'真实临时索引中的源码可通过，未依赖工作树文件');
+    const retiredName='docs/images/retired-product.png',retiredBlob=git(temp,['hash-object','-w','--stdin'],{env,input:png}).trim();
+    const historicalPolicy={...policy,retired:new Map([[retiredName,retiredBlob]])};
+    git(temp,['update-index','--add','--cacheinfo','100644',retiredBlob,retiredName],{env});
+    const retiredEntries=parseEntries(git(temp,['ls-files','--stage','-z'],{env}));
+    test(validate(retiredEntries,historicalPolicy,{history:true,readContent}).errors.length===0,'历史审核允许精确匹配的退休产品资源 blob');
+    test(validate(retiredEntries,historicalPolicy,{readContent}).errors.some(error=>error.startsWith(retiredName+'：')),'当前提交树不能重新加入退休资源');
+    test(staged().errors.some(error=>error.startsWith(retiredName+'：')),'暂存区不能重新加入退休资源');
+    test(validate(retiredEntries.map(e=>e.name===retiredName?{...e,oid:blob}:e),historicalPolicy,{history:true,readContent}).errors.some(error=>error.startsWith(retiredName+'：')),'历史同名文件换内容仍被拒绝');
+    test(validate(retiredEntries.map(e=>e.name===retiredName?{...e,mode:'120000'}:e),historicalPolicy,{history:true,readContent}).errors.some(error=>error.includes('符号链接')),'历史匹配 blob 不能放行符号链接');
+    test(validate([{name:'docs/BUSINESS_UX_AUDIT.md',mode:'100644',oid:retiredBlob}],historicalPolicy,{history:true,readContent}).errors.length===1,'历史资源匹配不能放行审查证明文档');
+    git(temp,['update-index','--force-remove',retiredName],{env});
     add('app-debug.apk');test(staged().errors.some(error=>error.startsWith('app-debug.apk：')),'真实临时索引拒绝已暂存 APK');
     git(temp,['update-index','--force-remove','app-debug.apk'],{env});test(staged().errors.length===0,'删除禁入索引条目后可以提交');
     const media='docs/import-guide/import-demo.webm';
@@ -228,7 +246,7 @@ function main(){
   if(options.mode==='directory'||(options.mode==='auto'&&!root))return report(validate(walk(options.directory),policy,{required:true,worktree:options.directory}),'完整源码目录');
   if(!root)throw new Error('staged / tracked / ref 检查要求处于 Git 仓库中；快照请使用 --directory');
   const readContent=entry=>{const result=spawnSync('git',['-C',root,'cat-file','blob',entry.oid],{maxBuffer:32*1024*1024});if(result.error)throw result.error;if(result.status!==0)throw new Error('Git blob 读取失败');return result.stdout;};
-  if(options.mode==='ref'||(options.mode==='auto'&&options.strict))return report(validate(committed(root,options.ref??'HEAD'),policy,{required:!options.pathsOnly,readContent}),'严格提交树');
+  if(options.mode==='ref'||(options.mode==='auto'&&options.strict))return report(validate(committed(root,options.ref??'HEAD'),policy,{required:!options.pathsOnly,readContent,history:options.mode==='ref'&&options.pathsOnly}),'严格提交树');
   if(options.mode==='staged')return report(validate(indexed(root,true),policy,{fullEntries:indexed(root,false),readContent}),'暂存索引新增与修改项');
   const entries=indexed(root,false),legacy=new Set();
   if(!options.strict){

@@ -1,17 +1,20 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import {useApp} from '../state/AppState';
-import {coursePeriod,compactWeeks,courseDates,type Book,type Course} from '../lib/model';
+import {coursePeriod,compactWeeks,courseDates,type AppData,type Book,type Course} from '../lib/model';
 import {BOOK_LIBRARY,compressCover} from '../lib/cover';
 import {navigationPlace} from '../lib/import';
 import {useDiscardGuard} from '../lib/useDiscardGuard';
 import {Icon} from './Icon';
 import {Dialog} from './Dialog';
 import {UnsavedChanges} from './UnsavedChanges';
+import {assertUnchanged,EditConflictError,latestData} from '../lib/editConflicts';
+import {EditConflictNotice} from './EditConflictNotice';
 
 export function CourseSheet({course,origin,onClose,navigate,editCourse}:{course:Course;origin?:DOMRect;onClose:()=>void;navigate:(c:Course)=>void;editCourse:(c:Course)=>void}){
   const {data,update,toast}=useApp(),book=data.books[course.name];
   const sheet=useRef<HTMLDivElement>(null),drag=useRef({y:0,active:false}),lock=useRef(false),closeDetailAfter=useRef(false),baseline=useRef<Book|null>(null),titleInput=useRef<HTMLInputElement>(null),id=useId();
   const previousFocus=useRef(document.activeElement instanceof HTMLElement?document.activeElement:null);
+  const editOrigin=useRef<{id:string;name:string;book:Book|undefined}|null>(null),[conflict,setConflict]=useState('');
   const [full,setFull]=useState(false),[expandedDates,setExpandedDates]=useState(false),[draft,setDraft]=useState<Book|null>(null),[busy,setBusy]=useState<'cover'|'save'|'remove'|null>(null),[error,setError]=useState(''),[titleError,setTitleError]=useState(''),[confirmRemove,setConfirmRemove]=useState(false);
   const dates=courseDates(course,data.schedule),periods=data.schedule.periods;
   const dirty=!!draft&&JSON.stringify(draft)!==JSON.stringify(baseline.current);
@@ -37,12 +40,19 @@ export function CourseSheet({course,origin,onClose,navigate,editCourse}:{course:
     window.addEventListener('dolphin-close-course-detail',closeEvent);document.addEventListener('keydown',key);
     return()=>{window.removeEventListener('dolphin-close-course-detail',closeEvent);document.removeEventListener('keydown',key);document.documentElement.classList.remove('gesturing');const trigger=previousFocus.current;if(trigger?.isConnected&&!trigger.closest('[inert]'))trigger.focus({preventScroll:true});};
   },[]);
-  function newDraft():Book{const builtin=BOOK_LIBRARY[course.name];return book?{...book}:{title:builtin?.title??course.name,publisher:builtin?.publisher??'',edition:'',text:'',source:builtin?'builtin':'manual'};}
-  function manual(){if(lock.current)return;const next=newDraft();baseline.current=next;closeDetailAfter.current=false;setDraft(next);setError('');setTitleError('');}
+  function draftFor(name:string,stored:Book|undefined):Book{const builtin=BOOK_LIBRARY[name];return stored?{...stored}:{title:builtin?.title??name,publisher:builtin?.publisher??'',edition:'',text:'',source:builtin?'builtin':'manual'};}
+  function newDraft():Book{return draftFor(course.name,book);}
+  function captureOrigin(){editOrigin.current={id:course.id,name:course.name,book};setConflict('');}
+  function checkOrigin(value:AppData){
+    const origin=editOrigin.current;if(!origin)throw new Error('请重新打开教材编辑');const owner=value.schedule.courses.find(c=>c.id===origin.id);
+    if(!owner||owner.name!==origin.name)throw new EditConflictError('教材所属课程',!owner);
+    assertUnchanged(origin.book,value.books[origin.name],'教材');return origin.name;
+  }
+  function manual(){if(lock.current)return;const next=newDraft();captureOrigin();baseline.current=next;closeDetailAfter.current=false;setDraft(next);setError('');setTitleError('');}
   async function cover(file:File|undefined,source:'camera'|'album'){
     if(!file||lock.current)return;
     lock.current=true;setBusy('cover');setError('');
-    const previous=draft??newDraft();if(!draft)baseline.current=previous;
+    const previous=draft??newDraft();if(!draft){captureOrigin();baseline.current=previous;}
     try{const image=await compressCover(file);setDraft({...previous,source,cover:image});closeDetailAfter.current=false;}
     catch(e){setError(`封面未更换：${(e as Error).message}`);toast((e as Error).message);}
     finally{lock.current=false;setBusy(null);}
@@ -51,15 +61,20 @@ export function CourseSheet({course,origin,onClose,navigate,editCourse}:{course:
     if(lock.current)return false;
     if(!draft?.title.trim()){closeDetailAfter.current=false;setTitleError('请填写教材名称。');titleInput.current?.focus();return false;}
     lock.current=true;setBusy('save');setError('');setTitleError('');
-    try{await update(s=>({...s,books:{...s.books,[course.name]:{...draft,title:draft.title.trim()}}}));setDraft(null);toast('教材已保存在本机');if(closeDetailAfter.current)onClose();closeDetailAfter.current=false;return true;}
-    catch(e){closeDetailAfter.current=false;setError(`保存未完成：${(e as Error).message}。修改仍在这里，请重试。`);return false;}
+    try{await update(s=>{const name=checkOrigin(s);return {...s,books:{...s.books,[name]:{...draft,title:draft.title.trim()}}};});setDraft(null);setConflict('');toast('教材已保存在本机');if(closeDetailAfter.current)onClose();closeDetailAfter.current=false;return true;}
+    catch(e){closeDetailAfter.current=false;if(e instanceof EditConflictError)setConflict(e.message);else setError(`保存未完成：${(e as Error).message}。修改仍在这里，请重试。`);return false;}
     finally{lock.current=false;setBusy(null);}
   }
   async function remove(){
     if(lock.current)return;lock.current=true;setBusy('remove');setError('');
-    try{await update(s=>{const books={...s.books};delete books[course.name];return {...s,books};});setDraft(null);setConfirmRemove(false);toast('已移除这门课的教材');}
-    catch(e){setError(`移除未完成：${(e as Error).message}。请重试。`);setConfirmRemove(false);}
+    try{await update(s=>{const name=checkOrigin(s),books={...s.books};delete books[name];return {...s,books};});setDraft(null);setConflict('');setConfirmRemove(false);toast('已移除这门课的教材');}
+    catch(e){if(e instanceof EditConflictError)setConflict(e.message);else setError(`移除未完成：${(e as Error).message}。请重试。`);setConfirmRemove(false);}
     finally{lock.current=false;setBusy(null);}
+  }
+  async function reload(){
+    if(lock.current||!editOrigin.current)return;lock.current=true;setBusy('save');
+    try{const current=await latestData(update),owner=current.schedule.courses.find(c=>c.id===editOrigin.current!.id);if(!owner)throw new EditConflictError('教材所属课程',true);const stored=current.books[owner.name],next=draftFor(owner.name,stored);editOrigin.current={id:owner.id,name:owner.name,book:stored};baseline.current=next;setDraft(next);setError('');setTitleError('');setConflict('');closeDetailAfter.current=false;}
+    catch(e){setConflict((e as Error).message);}finally{lock.current=false;setBusy(null);}
   }
   const patch=(key:keyof Book,value:string)=>{setDraft(d=>d?{...d,[key]:value}:d);setError('');if(key==='title')setTitleError('');};
   const destination=navigationPlace(course.room);
@@ -81,7 +96,7 @@ export function CourseSheet({course,origin,onClose,navigate,editCourse}:{course:
         {!draft&&error&&<p className="danger" role="alert">{error}</p>}{course.notes&&<p className="notes">{course.notes}</p>}<button className="text-button" disabled={!!busy} onClick={()=>editCourse(course)}>编辑这门课程</button>
       </div>
     </div>
-    <Dialog open={!!draft} title={book?'编辑教材':'标记教材'} onClose={requestBookClose}>{draft&&<form className="book-editor-form" onSubmit={e=>{e.preventDefault();void save();}} noValidate aria-busy={!!busy}>
+    <Dialog open={!!draft} title={(draft?editOrigin.current?.book:book)?'编辑教材':'标记教材'} onClose={requestBookClose}>{draft&&<form className="book-editor-form" onSubmit={e=>{e.preventDefault();void save();}} noValidate aria-busy={!!busy}>
       <div className="book-edit-top">{draft.cover?<img className="cover-preview" src={draft.cover} alt="待保存教材封面"/>:<div className="book-placeholder large"><Icon name="book" size={34}/></div>}<p className="muted">封面只保存在本机<br/>请核对教材名称与版次</p></div>
       <fieldset className="editor-fields" disabled={!!busy}>
         <label className="field">书名<input ref={titleInput} value={draft.title} onChange={e=>patch('title',e.target.value)} aria-invalid={!!titleError} aria-describedby={titleError?`${id}-title`:undefined}/></label>{titleError&&<p className="field-error" id={`${id}-title`} role="alert">{titleError}</p>}
@@ -89,7 +104,7 @@ export function CourseSheet({course,origin,onClose,navigate,editCourse}:{course:
         <label className="field">封面文字（可选）<textarea rows={2} value={draft.text} onChange={e=>patch('text',e.target.value)}/></label>
         <div className="book-cover-actions"><label className="secondary file-button">{busy==='cover'?'处理封面中…':'更换封面'}<input type="file" accept="image/*" aria-label="更换封面" disabled={!!busy} onChange={e=>{void cover(e.target.files?.[0],'album');e.target.value='';}}/></label>{draft.cover&&<button type="button" className="text-button" onClick={()=>setDraft(current=>current?{...current,cover:undefined}:current)}>移除封面</button>}</div>
       </fieldset>
-      {error&&<p className="danger" role="alert">{error}</p>}
+      {conflict&&<EditConflictNotice message={conflict} busy={!!busy} onReload={reload}/>}{error&&<p className="danger" role="alert">{error}</p>}
       <footer className="editor-actions"><div className="button-row"><button type="button" className="secondary" disabled={!!busy} onClick={requestBookClose}>取消</button><button type="submit" className="primary" disabled={!!busy}>{busy==='save'?'正在保存…':busy==='cover'?'处理封面中…':'保存并标记'}</button></div>{book&&<button type="button" className="danger text-button editor-delete" disabled={!!busy} onClick={()=>setConfirmRemove(true)}>移除教材</button>}</footer>
     </form>}</Dialog>
     <UnsavedChanges open={guard.confirming} busy={!!busy} onContinue={continueBookEditing} onDiscard={guard.discard} onSave={()=>{guard.continueEditing();void save();}}/>
