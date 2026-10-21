@@ -6,7 +6,11 @@ const browser=await launchBrowser(),page=await browser.newPage({viewport:{width:
 const checks=[],errors=[];page.on('pageerror',error=>errors.push(error.message));
 const active=()=>page.locator('.screen.active');
 const frame=()=>page.frameLocator('iframe[title="静谧课表"]');
-const check=async(name,run)=>{await run();checks.push(name);console.log('PASS '+name);};
+const check=async(name,run)=>{try{await run();checks.push(name);console.log('PASS '+name);}catch(error){
+  const host=await page.evaluate(()=>({date:document.querySelector('[data-screen=list] .home-inner')?.getAttribute('data-focus-date'),requests:window.__pluginUIRequests}));
+  const plugin=await frame().locator('body').evaluate(el=>({text:el.innerText,zone:Intl.DateTimeFormat().resolvedOptions().timeZone,next:(()=>{const d=new Date('2026-10-13T12:00:00');d.setDate(d.getDate()+1);return d.toString();})()})).catch(()=>null);
+  console.error('FAIL '+name,JSON.stringify({host,plugin}));throw error;
+}};
 const pluginState=()=>page.evaluate(async()=>{const {loadPluginState}=await import('/src/lib/plugins.ts');return loadPluginState();});
 const appState=()=>page.evaluate(async()=>{const {loadData}=await import('/src/lib/storage.ts');return loadData();});
 async function manager(){await goTab(page,'设置');await active().locator('[data-setting="plugins"]').click();await active().locator('.plugin-manager').waitFor();}
@@ -15,6 +19,7 @@ async function openTool(){await active().getByRole('button',{name:'打开插件�
 async function inspect(pkg){await active().locator('.plugin-source').evaluate(element=>element.open=true);await active().getByLabel('插件源码',{exact:true}).fill(JSON.stringify(pkg));await active().getByRole('button',{name:'查看插件信息与权限',exact:true}).click();}
 let baseline,themeBase;
 try{
+  await page.addInitScript(()=>{window.__pluginUIRequests=[];addEventListener('message',event=>{if(event.data?.method){window.__pluginUIRequests.push({method:event.data.method,date:event.data.args?.date});if(window.__pluginUIRequests.length>20)window.__pluginUIRequests.shift();}});});
   await page.clock.setFixedTime(new Date('2026-10-13T06:00:00Z'));
   await page.goto(process.env.TEST_URL??'http://127.0.0.1:5173');
   await page.getByRole('button',{name:'先逛一逛',exact:true}).click();
