@@ -19,7 +19,7 @@ Android APK 和 GitHub Pages 独立发布。网页共用 `ui/` 源码，由 Acti
 
 `ui/src/meta.ts` 是版本来源，`package.json` 的版本应保持一致。Gradle 编码规则为 `major × 10000 + minor × 100 + patch`，minor / patch 不超过 99。`RELEASE_NOTES.md` 记录相应版本变化。
 
-发布前先确定实际版本，保持 `ui/src/meta.ts`、`package.json`、`package-lock.json` 和发布说明一致。当前源码版本为 1.5.1，对应 versionCode 10501；未发布修改保留在版本记录的“未发布”部分，不把开发构建描述为新的正式 Release。
+发布前先确定实际版本，保持 `ui/src/meta.ts`、`package.json`、`package-lock.json` 和发布说明一致。当前源码版本为 1.5.5，对应 versionCode 10505；未发布修改保留在版本记录的“未发布”部分，不把开发构建描述为新的正式 Release。
 
 正式包名固定为 `com.dolphin.schedule`，debug 增加 `.debug`。它作为新 App 安装；不能覆盖更名前的旧包。后续同包更新仍须保持原签名并递增版本码。
 

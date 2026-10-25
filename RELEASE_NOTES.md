@@ -1,6 +1,8 @@
 # 版本记录
 
-## 未发布
+## 1.5.5
+
+发布日期：2026-10-25。Android 与 GitHub Pages 使用相同版本的共用界面。
 
 ### 使用变化
 
@@ -17,4 +19,4 @@
 
 ## 1.5.1
 
-当前重构沿用的源码版本。已发布版本的内容与附件见 [v1.5.1 Release](https://github.com/tequed232/Dolphin-Schedule/releases/tag/v1.5.1)；“未发布”部分仅描述后续修改，不表示已有新的正式 APK 发行。更早版本记录可从 [Releases](https://github.com/tequed232/Dolphin-Schedule/releases) 和 Git 历史查阅。
+1.5.5 重构前的源码基线。已发布内容与附件见 [v1.5.1 Release](https://github.com/tequed232/Dolphin-Schedule/releases/tag/v1.5.1)，更早版本记录可从 [Releases](https://github.com/tequed232/Dolphin-Schedule/releases) 和 Git 历史查阅。

@@ -26,7 +26,7 @@ const browser=await launchBrowser(),url=`http://127.0.0.1:${server.address().por
 try {
  const page=await browser.newPage({viewport:{width:390,height:844}});
  page.on('pageerror',error=>errors.push(error.message));
- await page.route('https://api.github.com/**',route=>route.fulfill({json:{tag_name:'v1.5.1',assets:[]}}));
+ await page.route('https://api.github.com/**',route=>route.fulfill({json:{tag_name:`v${version}`,assets:[]}}));
  await page.goto(url);assert.equal(await page.title(),'Dolphin Schedule');
  await page.getByRole('button',{name:'先逛一逛',exact:true}).click();
  await page.locator('.screen.active').getByRole('button',{name:'导入课表',exact:true}).click();
