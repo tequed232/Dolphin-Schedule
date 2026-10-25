@@ -2,18 +2,21 @@ param([string]$OutputRoot = '', [string]$PreviousApk = '', [string]$ApkPath = 'a
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location -LiteralPath $projectRoot
-$meta = Get-Content -Raw -LiteralPath 'ui/src/meta.ts'
+$meta = Get-Content -Raw -Encoding UTF8 -LiteralPath 'ui/src/meta.ts'
 $version = [regex]::Match($meta, "APP_VERSION\s*=\s*'([^']+)'").Groups[1].Value
-if (-not $version) { throw '未找到版本号' }
+if (-not $version) { throw 'Application version was not found' }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $projectRoot 'releases' }
 $destination = Join-Path $OutputRoot "Dolphin-Schedule-$version"
-if (Test-Path -LiteralPath $destination) { throw '交付目录已存在，请选择新目录，避免混入旧产物' }
-if (-not (Test-Path -LiteralPath $ApkPath -PathType Leaf)) { throw '请先构建签名 release APK' }
+if (Test-Path -LiteralPath $destination) { throw 'Delivery directory already exists; choose a new output directory' }
+if (-not (Test-Path -LiteralPath $ApkPath -PathType Leaf)) { throw 'Build a signed release APK first' }
 & (Join-Path $PSScriptRoot 'check-release.ps1') -ApkPath $ApkPath -PreviousApk $PreviousApk
 $apkName = "dolphin-schedule-$version.apk"
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 $outputApk = Join-Path $destination $apkName
 Copy-Item -LiteralPath $ApkPath -Destination $outputApk
-$hash = (Get-FileHash -LiteralPath $outputApk -Algorithm SHA256).Hash.ToLower()
+$algorithm = [System.Security.Cryptography.SHA256]::Create()
+$stream = [System.IO.File]::OpenRead($outputApk)
+try { $hash = [System.BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+finally { $stream.Dispose(); $algorithm.Dispose() }
 [System.IO.File]::WriteAllText((Join-Path $destination 'SHA256SUMS.txt'), "$hash  $apkName`n", [System.Text.UTF8Encoding]::new($false))
 Get-ChildItem -LiteralPath $destination -File | Select-Object Name,Length
