@@ -10,8 +10,11 @@ try{
   await mkdir('build/evidence',{recursive:true});
   await page.goto(process.env.TEST_URL??'http://127.0.0.1:5173');
   await page.getByRole('button',{name:'先逛一逛',exact:true}).click();
+  // Finishing onboarding saves to IndexedDB asynchronously before revealing navigation.
+  // Wait for that transition before measuring the content region.
+  await page.locator('.primary-navigation').waitFor({state:'visible'});
   assert.equal(await page.locator('.dock,#glass-droplet').count(),0);
-  const host=await page.locator('.screen-host').boundingBox(),navigation=await page.locator('.primary-navigation').boundingBox();assert.ok(host.y+host.height<=navigation.y+1);results.push({solidNavigation:true,contentReserved:true});
+  const {host,navigation}=await page.evaluate(()=>({host:document.querySelector('.screen-host').getBoundingClientRect().toJSON(),navigation:document.querySelector('.primary-navigation').getBoundingClientRect().toJSON()}));assert.ok(host.y+host.height<=navigation.y+1,JSON.stringify({host,navigation}));results.push({solidNavigation:true,contentReserved:true});
   await goTab(page,'设置');await page.locator('[data-setting="appearance"]').click();await page.waitForTimeout(350);
   assert.equal(await page.locator('#contour-background').count(),0);
   assert.equal(await page.locator('.app-background').evaluate(e=>getComputedStyle(e).position),'absolute');
