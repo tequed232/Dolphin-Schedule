@@ -1,4 +1,4 @@
-# Dependencies and generated output
+# 依赖、构建输出和日志：由工具生成，不纳入源码。
 node_modules/
 /ui/dist/
 /build/
@@ -8,14 +8,14 @@ node_modules/
 releases/
 *.log
 
-# Machine-local configuration and signing material
+# 本机 SDK 配置与发行签名材料：由开发者本地保管。
 local.properties
 signing.local.properties
 .signing/
 *.jks
 *.keystore
 
-# Personal IDE configuration
+# 个人 IDE 配置：不影响他人的开发环境。
 .idea/
 .run/
 *.iml
