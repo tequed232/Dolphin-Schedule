@@ -22,34 +22,21 @@
     "gradle/wrapper/gradle-wrapper.jar",
     ".githooks/pre-commit",
     ".githooks/pre-push",
-    "web/index.html",
-    "web/vite.config.ts",
-    "web/tsconfig.json",
-    "web/src/assets/icons/LICENSE",
-    "docs/import-guide/index.html",
-    "docs/import-guide/guide.css",
-    "docs/import-guide/guide.js",
-    "docs/import-guide/workflow.svg",
-    "docs/import-guide/chatgpt-step.png",
-    "docs/import-guide/deepseek-step.png",
-    "docs/import-guide/app-import-step.png",
-    "docs/import-guide/synthetic-schedule.json",
-    "docs/import-guide/synthetic-complete.csv",
-    "docs/import-guide/demo-source.txt",
-    "docs/import-guide/chatgpt-demo.jpg",
-    "docs/import-guide/deepseek-demo.jpg",
-    "docs/import-guide/import-demo.webm",
-    "docs/BRAND_ASSETS.md",
-    "docs/DEVELOPMENT_UPGRADE.md",
-    "docs/GLASS_AND_GESTURES.md",
-    "docs/IMPORT_GUIDE.md",
-    "docs/NAVIGATION_INTERACTION.md",
-    "docs/NOTIFICATION_INTEGRATION.md",
-    "docs/PERMISSIONS.md",
-    "docs/PLUGINS.md",
-    "docs/PUBLISHING.md",
-    "docs/SOURCE_POLICY.md",
-    "docs/images/app-icon.png"
+    "ui/index.html",
+    "ui/vite.config.ts",
+    "ui/tsconfig.json",
+    "ui/src/assets/icons/LICENSE",
+    ".editorconfig",
+    "docs/architecture.md",
+    "docs/directory-structure.md",
+    "docs/development.md",
+    "docs/data-and-migration.md",
+    "docs/release.md",
+    "docs/appearance.md",
+    "docs/notifications.md",
+    "docs/source-policy.md",
+    "docs/permissions.md",
+    "docs/navigation.md"
   ],
   "allowedPatterns": [
     ".github/**/*.md",
@@ -71,60 +58,30 @@
     "scripts/**/*.ts",
     "scripts/**/*.tsx",
     "scripts/**/*.ps1",
-    "web/src/**/*.ts",
-    "web/src/**/*.tsx",
-    "web/src/**/*.css",
-    "web/src/**/*.json",
-    "web/src/**/*.svg",
-    "web/src/**/*.png",
-    "web/src/**/*.jpg",
-    "web/src/**/*.jpeg",
-    "web/src/**/*.webp",
-    "web/src/vendor/**/LICENSE",
-    "web/src/vendor/**/LICENSE.md",
-    "web/src/vendor/**/LICENSE.txt",
+    "ui/src/**/*.ts",
+    "ui/src/**/*.tsx",
+    "ui/src/**/*.css",
+    "ui/src/**/*.json",
+    "ui/src/**/*.svg",
+    "ui/src/**/*.png",
+    "ui/src/**/*.jpg",
+    "ui/src/**/*.jpeg",
+    "ui/src/**/*.webp",
+    "ui/src/vendor/**/LICENSE",
+    "ui/src/vendor/**/LICENSE.md",
+    "ui/src/vendor/**/LICENSE.txt",
     "legal/**/*.txt",
-    "legal/**/*.md"
+    "legal/**/*.md",
+    "tests/**/*.mjs",
+    "tests/**/*.ts",
+    "tests/**/*.json"
   ],
   "allowedBinaryPaths": [
-    "gradle/wrapper/gradle-wrapper.jar",
-    "docs/import-guide/import-demo.webm"
+    "gradle/wrapper/gradle-wrapper.jar"
   ],
-  "binaryResources": [
-    {
-      "path": "docs/import-guide/import-demo.webm",
-      "mime": "video/webm",
-      "maxBytes": 20000000
-    },
-    {
-      "path": "docs/import-guide/chatgpt-demo.jpg",
-      "mime": "image/jpeg",
-      "maxBytes": 5000000
-    },
-    {
-      "path": "docs/import-guide/deepseek-demo.jpg",
-      "mime": "image/jpeg",
-      "maxBytes": 5000000
-    },
-    {
-      "path": "docs/import-guide/app-import-step.png",
-      "mime": "image/png",
-      "maxBytes": 5000000
-    },
-    {
-      "path": "docs/import-guide/chatgpt-step.png",
-      "mime": "image/png",
-      "maxBytes": 5000000
-    },
-    {
-      "path": "docs/import-guide/deepseek-step.png",
-      "mime": "image/png",
-      "maxBytes": 5000000
-    }
-  ],
+  "binaryResources": [],
   "deniedDirectoryNames": [
     "node_modules",
-    "build",
     "dist",
     "out",
     "target",
@@ -134,7 +91,6 @@
     ".run",
     ".signing",
     "releases",
-    "release",
     ".cache",
     ".npm",
     ".yarn",
@@ -157,7 +113,7 @@
     "id_ed25519",
     ".ds_store",
     "thumbs.db",
-    "Dolphin Calendar全量提示词.txt"
+    "Dolphin Schedule全量提示词.txt"
   ],
   "deniedPatterns": [
     "app/src/**/assets/**",
@@ -202,28 +158,31 @@
     "**/*.log",
     "**/*.bak",
     "**/*.iml",
-    "Dolphin Calendar全量提示词.txt"
+    "Dolphin Schedule全量提示词.txt",
+    "build/**",
+    "app/build/**",
+    "release/**"
   ],
   "legacyTrackedPatterns": [
     ".idea/**",
     ".run/**",
-    "Dolphin Calendar全量提示词.txt"
+    "Dolphin Schedule全量提示词.txt"
   ],
   "requiredPaths": [
     "source-policy.json",
-    "scripts/check-source-files.mjs",
-    "scripts/check-source-push.mjs",
+    "scripts/check/check-source-files.mjs",
+    "scripts/check/check-source-push.mjs",
     ".githooks/pre-commit",
     ".githooks/pre-push",
     ".github/workflows/source-admission.yml",
     "README.md",
     "package.json",
     "package-lock.json",
-    "web/index.html",
-    "web/src/main.tsx",
-    "web/src/meta.ts",
-    "web/tsconfig.json",
-    "web/vite.config.ts",
+    "ui/index.html",
+    "ui/src/main.tsx",
+    "ui/src/meta.ts",
+    "ui/tsconfig.json",
+    "ui/vite.config.ts",
     "build.gradle.kts",
     "settings.gradle.kts",
     "app/build.gradle.kts",

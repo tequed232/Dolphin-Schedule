@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node scripts/check-source-files.mjs --strict
-      - run: node scripts/check-source-files.mjs --self-test
-      - run: node scripts/check-source-push.mjs --self-test
-      - run: node scripts/check-source-push.mjs --ci
+      - run: node scripts/check/check-source-files.mjs --strict
+      - run: node scripts/check/check-source-files.mjs --self-test
+      - run: node scripts/check/check-source-push.mjs --self-test
+      - run: node scripts/check/check-source-push.mjs --ci
