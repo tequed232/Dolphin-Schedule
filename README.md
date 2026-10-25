@@ -57,6 +57,8 @@ Android 最低支持 **Android 8.0（API 26）**。网页版面向支持现代 W
 
 ## 仓库目录
 
+完整的 **[文件目录与放置规则](docs/directory-structure.md)** 包含目录树、根目录配置、Android/界面关键文件、测试和脚本用途，以及生成目录和本机配置的维护方式。下面是总览：
+
 ```text
 app/                         Android 宿主、系统能力、原生单元测试
 ui/
@@ -81,7 +83,7 @@ gradle/                      Gradle Wrapper
 .github/workflows/           验证、源码准入和 Pages 部署
 ```
 
-`ui/dist/`、`app/build/` 和根目录 `build/` 是生成输出，不进入 Git。测试数据不打入 APK。各目录的边界、数据流和资源生成流程见 [架构与目录职责](docs/architecture.md)。
+`ui/dist/`、`app/build/` 和根目录 `build/` 是生成输出，不进入 Git。测试数据不打入 APK。新增页面、业务逻辑、原生能力或资源时，可按 [文件放置规则](docs/directory-structure.md#新内容应该放在哪里) 选择位置；技术分层、数据流和资源生成流程见 [架构说明](docs/architecture.md)。
 
 ## 本地开发
 
@@ -118,6 +120,7 @@ macOS / Linux 使用 `bash ./gradlew`。Gradle 会构建共用界面并同步内
 | 背景、主题和品牌资源 | [外观与资源](docs/appearance.md) |
 | 提醒、行程和系统展示 | [通知说明](docs/notifications.md) |
 | Android 权限及触发时机 | [权限说明](docs/permissions.md) |
+| 每层目录、关键文件和新增内容的放置位置 | [文件目录指南](docs/directory-structure.md) |
 | 技术栈、目录边界与数据流 | [架构说明](docs/architecture.md) |
 | 开发环境、命令与验证 | [开发说明](docs/development.md) |
 | 正式签名、APK 交付与 Pages 部署 | [发布说明](docs/release.md) |
