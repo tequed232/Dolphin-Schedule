@@ -36,7 +36,14 @@
     "docs/notifications.md",
     "docs/source-policy.md",
     "docs/permissions.md",
-    "docs/navigation.md"
+    "docs/navigation.md",
+    ".githooks/README.md",
+    "app/README.md",
+    "ui/README.md",
+    "tests/README.md",
+    "scripts/README.md",
+    "gradle/wrapper/README.md",
+    "docs/README.md"
   ],
   "allowedPatterns": [
     ".github/**/*.md",
