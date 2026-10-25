@@ -1,0 +1,64 @@
+# 开发与验证
+
+## 环境
+
+- Node.js 24 与 npm，使用 `npm ci` 安装锁定依赖。
+- JDK 17，设置 `JAVA_HOME`；Gradle Wrapper 固定为 8.13。
+- Android SDK Platform 36、Build Tools 36.0.0；设备检查另需 Platform Tools / adb。
+- 浏览器测试使用本机 Chrome / Edge 或 Playwright Chromium，可用 `CHROME_PATH` 指定可执行文件。
+
+项目根目录创建未跟踪的 `local.properties`：
+
+```properties
+sdk.dir=C\:/Users/你的用户名/AppData/Local/Android/Sdk
+```
+
+也可通过 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 配置 SDK。个人 IDE 配置、SDK 路径、签名文件和构建产物不进入版本控制。
+
+## 常用命令
+
+所有命令从仓库根目录执行。
+
+| 命令 | 作用 |
+|---|---|
+| `npm ci` | 安装锁定依赖 |
+| `npm run dev` | 启动界面开发服务器，端口 5173 |
+| `npm run build` | TypeScript 检查与 Android 内置界面构建 |
+| `npm run preview` | 本地预览构建产物，端口 4173，仅供开发 |
+| `npm run check` | 工程约束与资源完整性检查 |
+| `npm test` | 单元测试 |
+| `npm run check:ui` | 自动启动独立服务器并运行浏览器回归，结束后关闭服务器 |
+| `npm run check:pages` | 验证构建后网页的部署路径、导入与刷新持久化 |
+| `npm run android` | Windows：通过 Wrapper 构建 debug APK 并运行 lint |
+| `npm run deliver` | Windows：校验并交付已有签名 release APK |
+
+浏览器回归使用端口 5183。单独运行 `node tests/browser/check-*.mjs` 时，需要自行启动 `npm run dev`；可用 `TEST_URL` 指定服务。浏览器开发不具备真实后台通知或系统日历能力，相关回调在测试中模拟。
+
+可用 `npm run check:ui -- --only=check-ui.mjs,check-background.mjs` 只重跑指定测试组。Pages 子路径验证先设置 `DOLPHIN_BASE_PATH=/Dolphin-Schedule/` 执行 `npm run build`，再在相同环境下执行 `npm run check:pages`；域名根路径可设为 `/`。普通 Android 构建由 Gradle 固定为 `./`。
+
+## Android
+
+```powershell
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
+```
+
+macOS / Linux 使用 `./gradlew`。Gradle 自动执行界面构建、资源同步与启动器品牌资源生成。需要先完成 `npm ci`。
+
+- Debug APK：`app/build/outputs/apk/debug/app-debug.apk`
+- Lint：`app/build/reports/`
+- 浏览器/工程证据：`build/evidence/`
+- 模拟器数据恢复备份：`build/device-backups/`
+
+`tests/android/` 保存需要显式指定设备的原生导航、通知、系统日历和更新检查；运行前阅读各脚本的设备与数据前置条件。仅在隔离测试设备上运行，浏览器回调模拟不代替实机验证。
+
+## 持续集成
+
+`.github/workflows/verify.yml` 安装 Node 24、JDK 17 和 Android SDK，依次运行界面构建、工程检查、单元测试、浏览器回归、debug APK 构建与 Android lint。工作流不需要发行私钥，也不发布正式 APK。
+
+## 资源维护
+
+品牌资源使用无损 WebP，尺寸、透明度和像素保持原 PNG 一致。替换资源后更新 `ui/src/assets/manifest.json` 中的尺寸、大小和 SHA-256，并运行 `npm run check` 与外观回归。启动器图标由 Gradle 自动复制统一源文件。
+
+`scripts/dev/vendor-icons.cjs` 可从锁定的 Material Symbols 包重新生成图标子集；图标清单与许可证随源码保存。不要引入网络字体作为离线 App 的必需依赖。
+
+源码准入检查与钩子路径已经同步到 scripts/check/；一次性测试输出及体积报告写入忽略的 build/evidence/。本轮构建来源与 APK SHA-256 记录在 build/evidence/build-provenance.json。

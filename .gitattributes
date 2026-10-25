@@ -1,8 +1,7 @@
-* text=auto
+* text=auto eol=lf
 *.sh text eol=lf
 gradlew text eol=lf
-.githooks/* text eol=lf
 *.bat text eol=crlf
 *.png binary
+*.webp binary
 *.jar binary
-web/src/assets/icons/LICENSE text eol=lf
