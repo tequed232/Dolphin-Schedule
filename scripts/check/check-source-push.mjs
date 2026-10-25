@@ -53,7 +53,7 @@ function selfTest(){
     const baseline=commit('synthetic base');
     const eventPath=path.join(temp,'event.json');
     writeFileSync(eventPath,JSON.stringify({before:baseline}));
-    const run=()=>spawnSync(process.execPath,['scripts/check/check-source-push.mjs','--ci'],{encoding:'utf8',env:{...process.env,GITHUB_EVENT_PATH:eventPath}});
+    const run=(eventName='push')=>spawnSync(process.execPath,['scripts/check/check-source-push.mjs','--ci'],{encoding:'utf8',env:{...process.env,GITHUB_EVENT_PATH:eventPath,GITHUB_EVENT_NAME:eventName}});
     let result=run();if(result.status!==0)throw new Error('合成纯源码提交未能通过');
     console.log('PASS 推送完整源码提交通过');
     const media='docs/import-guide/import-demo.webm';mkdirSync(path.join(temp,'docs/import-guide'),{recursive:true});writeFileSync(path.join(temp,media),'PK renamed synthetic archive');git(['add','-f',media]);const invalidMedia=commit('synthetic invalid tutorial media');git(['rm','--quiet',media]);commit('synthetic media deletion');
@@ -83,6 +83,13 @@ function selfTest(){
     git(['remote','add','origin',remote]);writeFileSync(eventPath,JSON.stringify({before:'0'.repeat(40),ref:'refs/heads/feature'}));
     result=run();if(result.status!==0)throw new Error('新分支 CI 未使用实时共享基线');
     console.log('PASS 新分支 CI 与 pre-push 使用相同的实时共享基线');
+    writeFileSync(eventPath,JSON.stringify({ref:'refs/heads/main'}));
+    result=run('workflow_dispatch');if(result.status!==0)throw new Error('手动验证错误重审已共享主分支的历史材料');
+    console.log('PASS 手动验证使用实时默认分支基线，允许检查清理后的源码');
+    writeFileSync(path.join(temp,'payload.apk'),'synthetic manual artifact');git(['add','-f','payload.apk']);const manualBad=commit('synthetic forbidden manual history');
+    git(['rm','--quiet','payload.apk']);commit('synthetic manual deletion');
+    result=run('workflow_dispatch');if(result.status===0||!result.stderr.includes(manualBad))throw new Error('手动验证未能拦截新增的历史 APK');
+    console.log('PASS 手动验证仍拒绝默认分支基线之后新增且删除的历史 APK');
   }finally{
     process.chdir(original);
     const target=path.resolve(temp),prefix=path.resolve(os.tmpdir())+path.sep;
@@ -97,7 +104,10 @@ try{
     const tip=git(['rev-parse','HEAD']);
     const event=process.env.GITHUB_EVENT_PATH?JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')):{};
     const baseline=event.pull_request?.base?.sha??event.before;
-    const shared=baseline&&sha.test(baseline)&&!zero.test(baseline)?[baseline]:sharedBaseline('origin',tip,event.ref);
+    // Manual runs verify current source against the live shared default branch;
+    // unlike a new-branch push, they do not introduce the entire existing history.
+    const targetRef=process.env.GITHUB_EVENT_NAME==='workflow_dispatch'?undefined:event.ref;
+    const shared=baseline&&sha.test(baseline)&&!zero.test(baseline)?[baseline]:sharedBaseline('origin',tip,targetRef);
     for(const ref of range(tip,shared))commits.add(ref);
   }else{
     const remote=process.argv[2];
