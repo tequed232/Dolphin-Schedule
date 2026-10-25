@@ -14,6 +14,6 @@
 | Playwright 1.55.1 | 本地验证工具 | Apache-2.0 |
 | Miuix 文档 | 共享 Web 主题的语义色参考，未链接 Compose 组件依赖 | Apache-2.0 |
 
-完整依赖版本与来源由 package-lock.json 和 Gradle 配置锁定。Apache-2.0 正文见 `legal/APACHE-2.0.txt`。Material Symbols 图标上游为 https://github.com/google/material-design-icons ，分发工具为 https://github.com/marella/material-symbols 。图标经过子集选择，图形路径未修改。
+完整依赖版本与来源由 [package-lock.json](package-lock.json) 和 [Gradle 配置](app/build.gradle.kts) 锁定。Apache-2.0 正文见 [许可证文本](legal/APACHE-2.0.txt)。Material Symbols 图标上游为 [Google Material Design Icons](https://github.com/google/material-design-icons)，分发工具为 [Material Symbols](https://github.com/marella/material-symbols)。图标经过子集选择，图形路径未修改。
 
-应用品牌图由用户提供，不属于 Material Symbols。启动器、应用内与 ColorOS 实时通知使用此图的无损 WebP 或等比例缩放版本。内置背景插画和已退休的液态玻璃实现不再包含在当前版本中。
+应用品牌图由项目作者提供，不属于 Material Symbols。启动器、应用内和通知彩图使用此图的无损 WebP 或等比例缩放版本；项目自己的列表和平铺 SVG 也不计入 Material Symbols 子集。资源清单与维护方式见 [外观说明](docs/appearance.md)。Android 和 Pages 共用这些源码与资源，产物生成位置见 [架构说明](docs/architecture.md)。
