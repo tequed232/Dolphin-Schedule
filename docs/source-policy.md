@@ -30,6 +30,8 @@ node scripts/check/check-source-push.mjs --self-test
 
 钩子安装是显式操作，不由 npm ci 修改用户已有钩子。pre-commit 检查实际 Git 暂存内容，pre-push 检查推送提交与新增历史，GitHub Actions 执行独立源码准入。根 build/ 和 app/build/ 属于输出；scripts/build/ 属于构建源码工具，两者按路径区分。
 
+手动触发源码准入时，以实时默认分支的共同祖先为历史基线，并严格检查当前源码；基线之后新增的违规历史仍会被拒绝。重写提交历史后，旧推送事件可能引用已经退出分支的提交编号，应对新历史重新触发手动验证。
+
 路径和 Markdown 链接应与 Git 中的大小写完全一致，避免 Windows 正常而 GitHub/Linux 失效。文件移动后同时更新引用，替换旧文件时从 Git 移除原件，避免保留重复资源。
 
 规则引擎自测使用 `tests/fixtures/source-policy.json` 中的合成政策，它不能替代实际仓库的准入规则。完整目录边界见 [架构说明](architecture.md)，验证步骤见 [开发说明](development.md)。
