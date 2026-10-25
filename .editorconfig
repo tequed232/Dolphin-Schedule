@@ -1,3 +1,4 @@
+# 统一文本编码、换行、缩进和行尾清理，减少跨编辑器的格式差异。
 root = true
 
 [*]
@@ -12,4 +13,5 @@ indent_size = 2
 indent_size = 4
 
 [*.bat]
+# Windows 批处理脚本使用 CRLF，其他文本默认使用 LF。
 end_of_line = crlf

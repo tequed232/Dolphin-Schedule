@@ -1,7 +1,9 @@
+# 文本默认使用 LF；Windows 批处理使用 CRLF，避免跨平台换行差异。
 * text=auto eol=lf
 *.sh text eol=lf
 gradlew text eol=lf
 *.bat text eol=crlf
+# 图片和 Wrapper 引导程序按二进制处理，不转换换行符。
 *.png binary
 *.webp binary
 *.jar binary
