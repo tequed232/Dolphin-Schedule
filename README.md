@@ -131,4 +131,4 @@ macOS / Linux 使用 `bash ./gradlew`。Gradle 会构建共用界面并同步内
 
 ## 许可
 
-项目业务代码按根目录 [GNU GPL v3](LICENSE) 授权。第三方依赖遵循各自许可，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 与 `legal/`。作者提供的品牌美术资源授权单独说明，见 [资源说明](docs/appearance.md)。
+项目业务代码采用 [MIT 许可证](LICENSE)，版权归 tequed232 所有。使用、修改或分发时请保留版权声明和许可证文本。第三方依赖遵循各自许可，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 与 `legal/`。作者提供的品牌美术资源授权单独说明，见 [资源说明](docs/appearance.md)。

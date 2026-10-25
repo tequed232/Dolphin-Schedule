@@ -2,6 +2,7 @@
   "name": "dolphin-schedule",
   "version": "1.5.5",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite --config ui/vite.config.ts --host 127.0.0.1 --port 5173 --strictPort",
