@@ -4,69 +4,127 @@
 
 把课程、教材和上课提醒，轻轻放在一起。
 
-面向校园日常的本地 Android 课表应用。当前源码基于 GitHub `main` 的 **1.5.1**，保留列表/平铺课表、JSON/CSV/Excel 导入、临时课程、教材、课前提醒、系统日历、应用更新和编辑冲突保护。本轮移除第三方插件系统及 App 内置背景插画，未选自定义图片时使用主题底色。
+Dolphin Schedule 是面向校园日常的本地课表应用，以 **Android App** 为主，同时提供 **GitHub Pages 网页访问**。无需账号或业务服务器，课表、教材封面、外观和偏好保存在当前设备。
 
-课表、教材封面和自定义背景在本机保存。无需账号或业务服务器；开启应用更新检查时访问 GitHub Release，导航由用户主动打开外部地图。**Android App 为主，同时保留 GitHub Pages 浏览器访问**；网页共用同一套 React 界面，不提供 Android 后台提醒或系统日历能力。浏览器与 App 的本地数据独立，课表可通过 JSON 导出、导入转移。
+[下载 Android 版本](https://github.com/tequed232/Dolphin-Schedule/releases) · [浏览器访问](https://tequed232.github.io/Dolphin-Schedule/) · [使用与迁移](docs/data-and-migration.md) · [反馈问题](https://github.com/tequed232/Dolphin-Schedule/issues)
 
-## 开发与构建
+## 可以做什么
 
-需要 Node.js 24、npm、JDK 17、Android SDK Platform 36 和 Build Tools 36.0.0。
+- **查看与编辑课表**：列表和平铺共用课程与选中日期，支持搜索、临时课程、拖动和调整节次。
+- **导入文件**：支持 JSON、CSV、XLS、XLSX，预览学期、课程和逐节作息后确认；也可仅更新时间表。
+- **管理教材**：为课程填写教材信息、选择封面，在课程详情中查看。
+- **安排上课提醒**：Android 提供课前提醒、导航行程和通知栏小伙伴；地图由用户主动打开。
+- **连接系统日历**：Android 可导入、清理和复原应用自己的课程日历，读取所选来源的节假日标记。
+- **调整外观**：支持深浅模式、文字缩放和自定义背景。默认使用主题底色，不附带背景图片。
+- **保护本地修改**：保存使用事务，多窗口修改和过期草稿发生冲突时明确提示。
+
+项目不提供第三方插件扩展、PWA 或单文件离线 HTML 发布。
+
+## Android 与网页版
+
+| 能力 | Android App | GitHub Pages |
+|---|---|---|
+| 课表浏览、编辑、搜索、文件导入与 JSON 导出 | 支持 | 支持 |
+| 教材、自定义背景、深浅模式 | 支持 | 支持 |
+| 数据保存 | App 自己的本地数据 | 当前浏览器、当前站点的本地数据 |
+| 后台提醒、实时行程通知、系统日历 | 原生能力 | 不提供 |
+| 版本更新 | GitHub Release 检查、下载 APK | 由 Pages 部署更新网页 |
+
+Android 最低支持 **Android 8.0（API 26）**。网页版面向支持现代 Web 标准的浏览器，不与 App 自动同步数据；两端可通过课表 JSON 转移课程。清除应用或站点数据会删除本地内容，请定期导出课表。
+
+## 开始使用
+
+1. 安装 [Releases](https://github.com/tequed232/Dolphin-Schedule/releases) 中的 APK，或打开 [网页版](https://tequed232.github.io/Dolphin-Schedule/)。发布内容以 Releases 和 Pages 的实际部署为准。
+2. 从主页导入课表文件，或手动添加第一门课程。只有截图或教务网页时，可使用导入页的转换提示词，先整理为 JSON。
+3. 核对预览中的开学日期、周数、节次时间与课程，确认后保存。
+4. 按需填写教材、设置学校和外观；Android 用户可开启提醒或使用系统日历。
+
+**更名版本的安装身份已变化。** 正式包名为 `com.dolphin.schedule`，debug 包为 `com.dolphin.schedule.debug`，数据库名为 `dolphin-schedule`。更名后的版本按新 App 安装，不能覆盖更名前的旧包；请先从旧 App 导出课表 JSON，再导入新版。JSON 不包含教材封面、背景和应用偏好，详见 [迁移说明](docs/data-and-migration.md)。
+
+## 技术栈
+
+| 层级 | 技术 |
+|---|---|
+| 共用界面 | React 19、TypeScript 5.9、CSS |
+| 界面构建 | Vite 7、Node.js 24、npm |
+| Android 宿主 | Kotlin 2.0、AndroidX Core / WebKit、WebViewAssetLoader |
+| 本地数据 | IndexedDB；原生提醒镜像使用 SharedPreferences |
+| Excel 导入 | `@e965/xlsx`，在导入时延迟加载 |
+| Android 构建 | Gradle 8.13、AGP 8.13、JDK 17、Android SDK 36 |
+| 验证 | Node test runner、tsx、Playwright、JUnit、Android lint |
+
+精确依赖版本见 [package.json](package.json)、[Gradle 配置](app/build.gradle.kts) 和 [架构说明](docs/architecture.md)。
+
+## 仓库目录
+
+```text
+app/                         Android 宿主、系统能力、原生单元测试
+ui/
+  src/
+    screens/                 页面
+    components/              课表、课程编辑器、弹层等共用组件
+    state/                   应用状态、事务、同步与编辑冲突
+    lib/                     模型、导入、存储与原生通信
+    nav/                     页面切换与返回手势
+    theme/                   主题与布局
+    assets/                  本地图标和统一品牌资源
+tests/
+  unit/ browser/ android/    逻辑、浏览器及设备验证
+  helpers/ fixtures/         测试工具与合成数据
+  integrity/                 工程约束和资源完整性
+scripts/
+  build/ check/ dev/ release/ 构建、检查、开发及交付工具
+docs/                        当前使用与维护说明
+legal/                       第三方许可证
+gradle/                      Gradle Wrapper
+.githooks/                   可选安装的源码准入钩子
+.github/workflows/           验证、源码准入和 Pages 部署
+```
+
+`ui/dist/`、`app/build/` 和根目录 `build/` 是生成输出，不进入 Git。测试数据不打入 APK。各目录的边界、数据流和资源生成流程见 [架构与目录职责](docs/architecture.md)。
+
+## 本地开发
+
+安装 Node.js 24 后，从仓库根目录执行：
 
 ```sh
 npm ci
 npm run dev
+```
+
+开发入口为 `http://127.0.0.1:5173`。常用验证命令：
+
+```sh
 npm run build
 npm run check
 npm test
 npm run check:ui
 ```
 
-浏览器开发入口：`http://127.0.0.1:5173`。配置本地 SDK 与 `JAVA_HOME` 后构建 Android：
+构建 Android 还需 JDK 17、Android SDK Platform 36 和 Build Tools 36.0.0。配置 SDK 路径后，在 Windows PowerShell 执行：
 
 ```powershell
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
 ```
 
-macOS / Linux 使用 `./gradlew`。Gradle 自动构建界面、同步 APK 内置资源、生成启动器图标。APK 输出为 `app/build/outputs/apk/debug/app-debug.apk`；环境、验证与设备检查见 [开发说明](docs/development.md)。
+macOS / Linux 使用 `bash ./gradlew`。Gradle 会构建共用界面并同步内置资源；debug APK 输出为 `app/build/outputs/apk/debug/app-debug.apk`。详细环境、Pages 子路径验证和设备测试见 [开发说明](docs/development.md)。
 
-## 技术栈与目录
+## 文档导航
 
-React 19、TypeScript 5.9、Vite 7 和 CSS 负责界面；Kotlin 2.0、AndroidX Core / WebKit 与 WebViewAssetLoader 负责 Android 系统能力。数据使用 IndexedDB，原生提醒镜像使用 SharedPreferences。Excel 解析使用本地依赖 `@e965/xlsx`，按导入任务延迟加载。
+| 想了解什么 | 文档 |
+|---|---|
+| 导入、导出、数据范围与旧版迁移 | [数据与迁移](docs/data-and-migration.md) |
+| 日期、列表 / 平铺、拖动和返回 | [导航交互](docs/navigation.md) |
+| 背景、主题和品牌资源 | [外观与资源](docs/appearance.md) |
+| 提醒、行程和系统展示 | [通知说明](docs/notifications.md) |
+| Android 权限及触发时机 | [权限说明](docs/permissions.md) |
+| 技术栈、目录边界与数据流 | [架构说明](docs/architecture.md) |
+| 开发环境、命令与验证 | [开发说明](docs/development.md) |
+| 正式签名、APK 交付与 Pages 部署 | [发布说明](docs/release.md) |
+| 可提交文件、生成输出与 Git 钩子 | [源码准入](docs/source-policy.md) |
+| 未发布变化与版本记录 | [版本记录](RELEASE_NOTES.md) |
 
-```text
-app/                Android 宿主、系统能力及原生单元测试
-ui/                 Android / Pages 共用界面、组件、业务逻辑与本地资源
-tests/              浏览器、TypeScript 单元、完整性测试及测试夹具
-scripts/            构建、源码准入、测试编排、开发和 APK 交付工具
-docs/               当前架构、开发、迁移和功能说明
-legal/              第三方许可证
-gradle/             Gradle Wrapper
-.githooks/           可选安装的提交与推送源码检查
-.github/workflows/  构建、回归、源码准入及 GitHub Pages 部署
-```
-
-[架构与目录职责](docs/architecture.md) 说明各层职责和数据流。[源码准入](docs/source-policy.md) 约束可提交文件；构建结果、日志、验证证据和临时工具链不进入源码仓库。
-
-## 使用与迁移
-
-列表与平铺共享同一份课表和选中日期；可手动编辑、添加单次课程，或导入 JSON、CSV、XLS、XLSX。支持课程与逐节作息同时导入，也支持仅更新时间表。所有导入先预览再确认，保存时检查其他窗口的修改。
-
-本轮将正式包名改为 `com.dolphin.schedule`，debug 包增加 `.debug`，数据库名为 `dolphin-schedule`，**按新 App 安装，不覆盖旧包、不自动迁移旧私有数据**。请从旧版导出课表 JSON，再导入新版；封面、背景、偏好和系统授权需重新设置。详见 [数据与迁移](docs/data-and-migration.md)。
-
-默认不附带背景图片；可在外观设置选择 JPG、PNG 或 WebP，并调节自定义背景模糊。关闭或移除图片后恢复主题底色。详见 [外观资源](docs/appearance.md)。
-
-通知、日历与权限边界见 [通知说明](docs/notifications.md) 和 [权限说明](docs/permissions.md)。提醒准时性和实时通知外观受系统策略影响；节假日只做标记，不自动调课。
-
-## 文档与发布
-
-- [开发环境与测试](docs/development.md)
-- [目录、技术栈与维护约定](docs/architecture.md)
-- [导入格式与迁移](docs/data-and-migration.md)
-- [导航与列表/平铺交互](docs/navigation.md)
-- [签名与 APK 交付](docs/release.md)
-- [版本变化](RELEASE_NOTES.md)
-
-作者：[tequed232](https://github.com/tequed232/)。问题报告请说明版本、Android / WebView 版本、重现步骤及实际结果；样本请去除个人信息。
+作者：[tequed232](https://github.com/tequed232/)。[反馈问题](https://github.com/tequed232/Dolphin-Schedule/issues) 时，请说明版本、运行平台、重现步骤和实际结果；Android 请附系统及 WebView 版本，网页请附浏览器版本。分享课表、截图或日志前，请移除个人信息。
 
 ## 许可
 

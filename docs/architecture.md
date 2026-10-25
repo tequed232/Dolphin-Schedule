@@ -23,12 +23,12 @@ Dolphin Schedule 采用单 Android 模块与一套共用 React 界面。Android 
 |---|---|
 | `app/src/main/java/com/dolphin/schedule/` | Kotlin 宿主及系统能力、更新检查和原生导航，不复制 React 的课程编辑业务逻辑 |
 | `MainActivity.kt` | WebView 初始化、原生通信、返回手势、权限与系统选择器 |
-| `ReminderScheduler.kt` | 原生课表镜像、课次计算、AlarmManager 和重启恢复 |
+| `ReminderScheduler.kt` | 原生课表镜像、课次计算、AlarmManager，以及打开应用、应用更新或时间变化后的调度恢复 |
 | `Notifications.kt`、`LiveNotificationSupport.kt` | 课前提醒、持续行程和实时通知能力检查 |
 | `CalendarSync.kt`、`SystemHolidays.kt` | 应用自己的课程日历写入/复原、选择来源后的节假日读取 |
 | `app/src/main/res/` | Android 主题、单色通知图标、通知彩图与 XML 资源 |
 | `ui/src/screens/` | 主页、搜索、导入、设置、系统日历等页面 |
-| `ui/src/components/` | 月历、列表/平铺课表、课程编辑器、弹层、引导和实体导航 等共享组件 |
+| `ui/src/components/` | 月历、列表/平铺课表、课程编辑器、弹层、引导和实体导航等共享组件 |
 | `ui/src/lib/` | 模型、JSON/CSV/Excel 导入、存储、图片处理和 Android 通信入口 |
 | `ui/src/state/` | 应用状态、原子事务、多窗口同步、编辑冲突检查和异步读取 |
 | `ui/src/nav/` | 页面切换、返回与手势状态 |
@@ -44,6 +44,7 @@ Dolphin Schedule 采用单 Android 模块与一套共用 React 界面。Android 
 | `scripts/dev/` | 本地图标子集生成工具 |
 | `scripts/release/` | 正式 APK 身份校验与交付 |
 | `docs/`、`legal/` | 当前维护说明、第三方许可证 |
+| `.github/workflows/` | `verify.yml` 验证应用，`source-admission.yml` 检查源码准入，`pages.yml` 构建并部署网页 |
 
 ## 数据与原生通信
 
@@ -74,10 +75,10 @@ React 发起修改 → 验证输入 → IndexedDB 事务提交成功 → 更新 
 
 Pages 工作流从 GitHub 读取部署子路径，通过 `DOLPHIN_BASE_PATH` 构建同一个 `ui/dist/`。Android 构建固定使用相对资源路径 `./`，避免网页部署路径进入 APK。网页保留课程浏览、编辑、搜索和文件导入；原生提醒、系统日历及 Android 安装更新依赖宿主。
 
-`ui/src/meta.ts` 提供应用名和版本；npm 版本保持一致，Gradle 从该文件读取版本并生成 versionCode。新包身份为 `com.dolphin.schedule`，调试包增加 `.debug`。
+`ui/src/meta.ts` 提供应用名和版本；npm 版本保持一致，Gradle 从该文件读取版本并生成 versionCode。正式包身份为 `com.dolphin.schedule`，调试包增加 `.debug`，IndexedDB 名为 `dolphin-schedule`。Android、debug 包和浏览器不共享私有数据，迁移范围见 [数据说明](data-and-migration.md)。
 
 用户数据与运行时功能不放入测试目录；应用运行时不导入测试夹具。保存失败不得发布成功状态，取消和返回必须保护未保存草稿；系统日历操作只管理本 App 自己的课程日历。
 
-源码基线为 [GitHub main 的 7968389](https://github.com/tequed232/Dolphin-Schedule/commit/79683895f59b83402e2c9932191a1323b40787d7)，版本为 1.5.1。更名后的重构在此基线上进行，不包含上一轮 1.4.1 的界面或业务代码。
+当前无默认背景图片，自定义背景关闭时直接显示主题底色。项目只维护应用自身功能，不提供第三方插件运行时、注册接口或扩展市场。
 
-当前无默认背景图片，自定义背景关闭时直接显示主题底色。GitHub 更新检查保留，第三方插件管理、iframe、SDK、示例和存储模块均已删除。
+环境和验证入口见 [开发说明](development.md)，允许提交的文件与历史准入规则见 [源码准入](source-policy.md)。一次性构建体积、截图和验收记录保存在忽略的输出目录，不作为长期架构说明的一部分。
