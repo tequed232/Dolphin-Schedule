@@ -1,15 +1,15 @@
 import java.util.Properties
 
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
-val appVersion = Regex("APP_VERSION\\s*=\\s*'([^']+)'").find(rootProject.file("web/src/meta.ts").readText())!!.groupValues[1]
+val appVersion = Regex("APP_VERSION\\s*=\\s*'([^']+)'").find(rootProject.file("ui/src/meta.ts").readText())!!.groupValues[1]
 val versionParts = appVersion.split('.').map(String::toInt)
 val signingFile = rootProject.file("signing.local.properties")
 val signing = Properties().apply { if(signingFile.exists()) signingFile.inputStream().use { load(it) } }
 android {
-    namespace = "com.dolphin.calendar"
+    namespace = "com.dolphin.schedule"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.dolphin.calendar" // 正式包身份固定；版本更新不能修改此值。
+        applicationId = "com.dolphin.schedule"
         minSdk = 26
         targetSdk = 36
         versionName = appVersion
@@ -30,19 +30,29 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true }
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/assets"))
+    sourceSets.getByName("main").res.srcDir(layout.buildDirectory.dir("generated/res/brand"))
 }
-val buildWeb by tasks.registering(Exec::class) {
+val buildUi by tasks.registering(Exec::class) {
     workingDir(rootProject.projectDir)
+    environment("DOLPHIN_BASE_PATH", "./")
     commandLine(if(System.getProperty("os.name").startsWith("Windows")) "npm.cmd" else "npm", "run", "build")
-    inputs.dir(rootProject.file("web/src")); inputs.file(rootProject.file("package-lock.json")); inputs.file(rootProject.file("web/index.html")); inputs.file(rootProject.file("scripts/build-offline.mjs")); outputs.dir(rootProject.file("web/dist"))
+    inputs.dir(rootProject.file("ui/src"))
+    inputs.files(rootProject.file("package.json"), rootProject.file("package-lock.json"), rootProject.file("ui/index.html"), rootProject.file("ui/vite.config.ts"), rootProject.file("ui/tsconfig.json"))
+    outputs.dir(rootProject.file("ui/dist"))
 }
-val syncWeb by tasks.registering(Sync::class) {
-    dependsOn(buildWeb)
-    from(rootProject.file("web/dist")) { exclude("Dolphin-Calendar-offline.html") }
-    into(layout.projectDirectory.dir("src/main/assets/web"))
+val syncUi by tasks.registering(Sync::class) {
+    dependsOn(buildUi)
+    from(rootProject.file("ui/dist"))
+    into(layout.buildDirectory.dir("generated/assets/ui"))
 }
-tasks.named("preBuild") { dependsOn(syncWeb) }
+val syncBrand by tasks.registering(Sync::class) {
+    from(rootProject.file("ui/src/assets/brand/app-icon.webp"))
+    rename("app-icon.webp", "app_icon.webp")
+    into(layout.buildDirectory.dir("generated/res/brand/drawable-nodpi"))
+}
+tasks.named("preBuild") { dependsOn(syncUi, syncBrand) }
 tasks.matching { it.name == "validateSigningRelease" }.configureEach {
-    doFirst { check(signingFile.exists()) { "正式升级包必须使用原有发行签名，请恢复 signing.local.properties 和原密钥。" } }
+    doFirst { check(signingFile.exists()) { "正式包需要发行签名，请配置 signing.local.properties 和发行密钥。" } }
 }
 dependencies { implementation("androidx.webkit:webkit:1.12.1"); implementation("androidx.core:core-ktx:1.15.0"); testImplementation("junit:junit:4.13.2") }
