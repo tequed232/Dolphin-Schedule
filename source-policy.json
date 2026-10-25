@@ -28,6 +28,7 @@
     "ui/src/assets/icons/LICENSE",
     ".editorconfig",
     "docs/architecture.md",
+    "docs/directory-structure.md",
     "docs/development.md",
     "docs/data-and-migration.md",
     "docs/release.md",

@@ -19,6 +19,8 @@ Dolphin Schedule 采用单 Android 模块与一套共用 React 界面。Android 
 
 ## 目录
 
+下面按层说明职责边界。完整目录树、根配置文件、原生/界面关键文件、脚本入口与生成目录详见 **[文件目录与放置规则](directory-structure.md)**。
+
 | 路径 | 用途与边界 |
 |---|---|
 | `app/src/main/java/com/dolphin/schedule/` | Kotlin 宿主及系统能力、更新检查和原生导航，不复制 React 的课程编辑业务逻辑 |
