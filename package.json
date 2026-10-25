@@ -1,5 +1,6 @@
 {
   "name": "dolphin-schedule",
+  "description": "面向校园日常的本地课表应用，共用 React 界面支持 Android 与浏览器访问。",
   "version": "1.5.5",
   "private": true,
   "license": "MIT",
