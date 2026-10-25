@@ -2,8 +2,6 @@
 
 # Dolphin Schedule
 
-把课程、教材和上课提醒，轻轻放在一起。
-
 Dolphin Schedule 是面向校园日常的本地课表应用，以 **Android App** 为主，同时提供 **GitHub Pages 网页访问**。无需账号或业务服务器，课表、教材封面、外观和偏好保存在当前设备。
 
 [下载 Android 版本](https://github.com/tequed232/Dolphin-Schedule/releases) · [浏览器访问](https://tequed232.github.io/Dolphin-Schedule/) · [使用与迁移](docs/data-and-migration.md) · [反馈问题](https://github.com/tequed232/Dolphin-Schedule/issues)
