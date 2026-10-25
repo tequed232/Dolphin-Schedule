@@ -57,6 +57,8 @@ Android 最低支持 **Android 8.0（API 26）**。网页版面向支持现代 W
 
 完整的 **[文件目录与放置规则](docs/directory-structure.md)** 包含目录树、根目录配置、Android/界面关键文件、测试和脚本用途，以及生成目录和本机配置的维护方式。下面是总览：
 
+主要目录内也有中文 `README.md`，进入目录即可查看用途和维护入口。提交说明采用 `feat`、`fix`、`build`、`docs` 等英文类型配合中文描述，约定见 [开发说明](docs/development.md#中文提交说明)。
+
 ```text
 app/                         Android 宿主、系统能力、原生单元测试
 ui/
