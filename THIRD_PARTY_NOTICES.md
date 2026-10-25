@@ -2,6 +2,8 @@
 
 项目业务代码采用根目录的 [MIT 许可证](LICENSE)，Copyright (c) 2026 tequed232。第三方组件遵循下表各自的许可，项目许可证调整不会替换这些组件的版权声明或许可证文本。
 
+本文件说明组件来源、版本和用途，许可证正文的存放位置见 [legal 目录说明](legal/README.md)。
+
 | 组件 | 用途 | 许可证 |
 |---|---|---|
 | SheetJS CE（@e965/xlsx 0.20.3 分发） | XLSX / XLS 本机解析 | Apache-2.0，完整文本见 `legal/APACHE-2.0.txt` |
