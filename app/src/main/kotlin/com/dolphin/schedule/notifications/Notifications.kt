@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import com.dolphin.schedule.R
+import com.dolphin.schedule.maps.MapLaunchActivity
 import org.json.JSONObject
 
 /** 只有主动导航才创建行程通知；不发课前提醒、测试通知或常驻桌宠。 */
@@ -97,6 +98,14 @@ object Notifications {
         if(token.isNotBlank() && JourneyState.preferences(context).getString("journeyToken",null)==token)stopJourney(context)
     }
 
+    /** 通知按钮仅允许打开仍在有效期内、镜像目标一致的当前行程。 */
+    @Synchronized fun currentJourneyMap(context: Context,token: String): String? {
+        reconcile(context)
+        if(token.isBlank() || JourneyState.preferences(context).getString("journeyToken",null)!=token)return null
+        val state=active(context)
+        return state.optString("mapUrl").takeIf { it.isNotBlank() && withinLifetime(state) && targetMatches(context,state) }
+    }
+
     /** 目标必须仍与已提交的课程镜像一致，调用者已成功打开地图后才可调用。 */
     @Synchronized fun journey(context: Context,courseId: String,title: String,room: String,mapUrl: String,timeoutMillis: Long=JourneyPolicy.MAX_DURATION): Boolean {
         val settings=JourneyState.settings(context);val manager=context.getSystemService(NotificationManager::class.java)
@@ -111,7 +120,9 @@ object Notifications {
         val duration=JourneyPolicy.duration(timeoutMillis);val token=java.util.UUID.randomUUID().toString()
         val started=System.currentTimeMillis();val elapsed=SystemClock.elapsedRealtime()
         val presentation=courseNotificationPresentation(title,roomLabel(context,room),bookTitle(context,title))
-        val map=PendingIntent.getActivity(context,13,Intent(Intent.ACTION_VIEW,Uri.parse(mapUrl)),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val map=PendingIntent.getActivity(context,13,Intent(context,MapLaunchActivity::class.java)
+            .setData(Uri.parse("dolphin-schedule://map/$token")).putExtra("journeyToken",token),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder=Notification.Builder(context,JOURNEY_CHANNEL)
             .setSmallIcon(R.drawable.ic_notification).journeyCard(context,presentation).setColor(0x3B6550)
             .setOngoing(true).setOnlyAlertOnce(true).setCategory(if(Build.VERSION.SDK_INT>=28)Notification.CATEGORY_NAVIGATION else Notification.CATEGORY_SERVICE)

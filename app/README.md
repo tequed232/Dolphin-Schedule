@@ -12,6 +12,7 @@
 | `src/main/kotlin/com/dolphin/schedule/importing/` | JSON / CSV / Excel 解析、映射与预览 |
 | `src/main/kotlin/com/dolphin/schedule/academic/` | 允许学校的浏览器、登录环境与识别控制 |
 | `src/main/kotlin/com/dolphin/schedule/notifications/` | 系统行程卡片、有效令牌、超时与到达接收器 |
+| `src/main/kotlin/com/dolphin/schedule/maps/` | 课程与通知共用的高德客户端启动、网页回退与行程校验入口 |
 | `src/main/kotlin/com/dolphin/schedule/media/` | 封面与背景的本机压缩、方向校正 |
 | `src/main/assets/academic/extract.js` | 学校课表 DOM / 同源学期信息提取 |
 | `src/main/res/` | 品牌图、主题、系统图标、文件共享和备份规则 |

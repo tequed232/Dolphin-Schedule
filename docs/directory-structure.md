@@ -15,6 +15,7 @@ Dolphin-Schedule/
 │     │  ├─ kotlin/com/dolphin/schedule/
 │     │  │  ├─ NativeActivity.kt
 │     │  │  ├─ notifications/        系统行程卡片、令牌与接收器
+│     │  │  ├─ maps/                 地图客户端调起与网页回退
 │     │  │  ├─ ui/
 │     │  │  │  ├─ timetable/         课表、日期、课程详情与拖动
 │     │  │  │  ├─ settings/          设置首页与设置图标
@@ -87,6 +88,8 @@ Kotlin 主源码、JVM 测试和设备测试分别统一位于 `src/main/kotlin/
 | `media/` | 本地图片压缩、方向校正和有界缓存 | 图片只在本机处理 |
 | `notifications/Notifications.kt` / `JourneyState.kt` | 导航后的行程展示、令牌和旧功能清理 | 不创建课前提醒或常驻桌宠 |
 | `notifications/NotificationRoute.kt` | 点击通知后的原生课程路由 | 校验目标，避免错误打开过期课程 |
+| `domain/MapLaunchPlan.kt` | 从已校验的学校与楼栋链接构造高德官方 URI | 纯 Kotlin 规则，不猜测坐标 |
+| `maps/MapLauncher.kt` / `MapLaunchActivity.kt` | 直接打开地图客户端、失败回退网页，接收通知点击 | 通知入口先检查当前行程令牌、期限及目标；不经广播或服务启动界面 |
 
 ## 资源放在哪里
 

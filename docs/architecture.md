@@ -21,7 +21,7 @@ Dolphin Schedule 的界面与关键业务由 Kotlin＋Jetpack Compose 实现。`
 | 持久化 | `data/` | SQLite、编码、事务、迁移及应用私有草稿文件 |
 | 文件导入 | `importing/` | JSON / CSV / Excel 单元格处理、工作表、映射和预览 |
 | 教务 | `academic/` 与 `assets/academic/extract.js` | 学校访问限制、用户登录、页面识别与结果回传 |
-| 系统能力 | `notifications/` 与 `media/` | 主动导航、行程通知、文件共享、图片处理 |
+| 系统能力 | `maps/`、`notifications/` 与 `media/` | 地图客户端调起、行程通知、文件共享、图片处理 |
 
 ## 一份已提交数据
 
@@ -50,6 +50,10 @@ Android 系统 WebView 是这些能力的运行环境，不是 Compose 的页面
 ## 导航与行程
 
 地图地址只包含学校和识别出的楼栋，完整教室号保留在 App。地图由用户点击后打开；成功打开后，根据通知设置和权限创建最长 30 分钟的行程。行程令牌隔离到达、删除和超时操作，旧操作不能结束后来启动的行程。课程或目标已变化时，撤下失效行程，不后台恢复。
+
+`domain/MapLaunchPlan.kt` 保留原有 HTTPS 目标作为持久化及校验依据，为高德生成官方 `androidamap://poi` 搜索入口。`maps/MapLauncher.kt` 指定 `com.autonavi.minimap` 启动，客户端不存在或拒绝启动时再打开原 HTTPS 链接；百度保持原网页入口。不增加地图 SDK、定位权限或应用扫描。没有已确认坐标时只做关键词搜索，不声称已开始步行路线。
+
+通知目的地按钮直接启动非导出的 `maps/MapLaunchActivity`，通过令牌、期限和当前目标校验后复用同一启动器。每段行程的 PendingIntent 使用不同身份，旧按钮不会被更新成新目标；不使用通知广播或服务作为 Activity 跳转中转。
 
 通知仅保留这个导航行程链路。应用不再调度课前提醒、桌宠、台词、系统日历同步或节假日查询。
 

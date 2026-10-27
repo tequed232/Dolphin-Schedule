@@ -36,6 +36,14 @@
 
 教务浏览有网页历史时优先返回上一页，支持手势进度和取消复原；没有网页历史时由系统处理 Activity 返回。无需额外权限。实现依据：[Android 预测式返回进度](https://developer.android.com/develop/ui/compose/system/predictive-back-progress)。
 
+## 打开地图
+
+课程详情、主页导航和行程卡片的目的地按钮共用地图启动器。选择高德时，优先通过官方 `androidamap://poi` URI、指定 `com.autonavi.minimap` 打开本地客户端；未安装、没有对应入口或系统拒绝启动时，回退原 HTTPS 网页。百度保持现有网页入口。实现依据：[高德 Android 关键词搜索](https://lbs.amap.com/api/amap-mobile/guide/android/search)。
+
+搜索词仅包含学校与识别出的楼栋，完整教室号继续显示在课表和行程卡片中。当前没有校内楼栋的已确认坐标，因此打开的是地点搜索，需在高德中核对地点并开始路线；不会把文本或猜测的坐标当成准确导航目的地。客户端接受启动请求也不代表已经找到地点或开始路线。
+
+通知按钮先验证当前行程令牌、目标和有效期；过期、已结束或课程已变化时提示重新选择课程，不打开旧目标，也不创建或延长行程。按钮直接启动 Activity，遵守 [Android 通知跳转约束](https://developer.android.com/about/versions/12/behavior-changes-12#notification-trampolines)，不经广播或服务调起界面。
+
 ## 导入与并发保护
 
 文件导入先选文件、识别/映射、预览再确认；教务导入先核对开学日期，再预览课程和作息。选文件、取消或仅展开预览均不修改已保存课表。多工作表选择和已应用映射在重新预览时保留，不能无声改用另一份源数据。

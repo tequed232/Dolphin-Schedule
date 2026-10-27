@@ -28,6 +28,7 @@ import org.junit.*
 import org.junit.Assert.*
 import org.junit.rules.ExternalResource
 import java.io.File
+import android.app.Instrumentation
 
 /** 只在显式授权的隔离模拟器运行；绝不向真机写入合成课表或通知。 */
 class NativeJourneyTest {
@@ -122,7 +123,8 @@ class NativeJourneyTest {
     @Test fun refusedOrUnavailablePermissionStillOpensTheCurrentMapWithoutNotification() {
         val controller=controller()
         compose.runOnUiThread { controller.navigate(first);controller.permissionResult(false) };idle(controller)
-        assertEquals(courseDestination(first,data().settings).url,maps.single().data.toString())
+        assertEquals(mapLaunchPlan(courseDestination(first,data().settings).url).nativeUrl,maps.single().data.toString())
+        assertEquals("com.autonavi.minimap",maps.single().`package`)
         assertFalse(Notifications.journeyActive(context));assertTrue(messages.any { it.contains("地图已打开") })
         maps.clear();messages.clear()
         compose.runOnUiThread { controller.navigate(first);controller.permissionLaunchFailed() };idle(controller)
@@ -162,6 +164,30 @@ class NativeJourneyTest {
         assertFalse(JourneyState.preferences(context).contains("activeJourney"))
         assertFalse(JourneyState.preferences(context).contains("journeyToken"))
         assertTrue(manager.activeNotifications.none { it.id in listOf(10,11,12,99) })
+    }
+    @Test fun notificationMapActionUsesNativeLauncherAndRetiredActionCannotOpenAnotherJourney() {
+        val oldToken=post();val retired=active().actions[0].actionIntent
+        val token=post(second)
+        assertNotEquals(retired,active().actions[0].actionIntent)
+        assertNull(Notifications.currentJourneyMap(context,oldToken))
+        assertEquals(courseDestination(second,data().settings).url,Notifications.currentJourneyMap(context,token))
+        val opened=java.util.concurrent.CopyOnWriteArrayList<Intent>()
+        val monitor=object: Instrumentation.ActivityMonitor() {
+            override fun onStartActivity(intent: Intent): Instrumentation.ActivityResult? {
+                if(intent.`package`!="com.autonavi.minimap")return null
+                opened+=Intent(intent)
+                return Instrumentation.ActivityResult(android.app.Activity.RESULT_OK,null)
+            }
+        }
+        instrumentation.addMonitor(monitor)
+        try {
+            active().actions[0].actionIntent.send()
+            compose.waitUntil(5_000) { opened.size==1 }
+            assertEquals(mapLaunchPlan(courseDestination(second,data().settings).url).nativeUrl,opened.single().data.toString())
+            retired.send();instrumentation.waitForIdleSync()
+            assertEquals(1,opened.size)
+            assertEquals(token,JourneyState.preferences(context).getString("journeyToken",null))
+        } finally { instrumentation.removeMonitor(monitor) }
     }
     @Test fun resumeKeepsDeadlineAndExpiredOrChangedTargetIsRemovedWithoutRevival() {
         post(duration=Long.MAX_VALUE)

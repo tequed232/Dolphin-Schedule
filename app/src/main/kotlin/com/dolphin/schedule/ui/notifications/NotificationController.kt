@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.runtime.*
@@ -16,6 +15,7 @@ import com.dolphin.schedule.domain.*
 import com.dolphin.schedule.notifications.JourneyState
 import com.dolphin.schedule.notifications.LiveNotificationSupport
 import com.dolphin.schedule.notifications.Notifications
+import com.dolphin.schedule.maps.MapLauncher
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -65,7 +65,7 @@ class NotificationController(
                     val course=current.schedule.courses.find { it.id==action.getString("id") } ?: error("课程已移除，导航未开始")
                     val target=courseDestination(course,current.settings)
                     require(target.url==action.getString("url") && target.room==action.getString("room") && course.name==action.getString("title")) { "课程或导航设置已变化，请重新点击导航" }
-                    try { openMap(Intent(Intent.ACTION_VIEW,Uri.parse(target.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    try { MapLauncher.open(app,target.url,openMap) }
                     catch(_: Exception) { error("未找到地图或浏览器，请先安装可用的地图应用") }
                     if(current.settings.notificationsEnabled && current.settings.journeyLive) {
                         val shown=allowed && withContext(Dispatchers.IO) { Notifications.journey(app,course.id,course.name,target.room,target.url) }
