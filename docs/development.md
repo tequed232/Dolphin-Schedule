@@ -59,7 +59,7 @@ Gradle 在构建时同步 Excel 解码器和离线许可；品牌图直接来自
 ```powershell
 adb -s emulator-5562 install -r app/build/outputs/apk/debug/app-debug.apk
 adb -s emulator-5562 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb -s emulator-5562 shell am instrument -w -e allowNativeDataTests true -e class com.dolphin.schedule.ui.CapsuleNavigationTest,com.dolphin.schedule.ui.NativeFlowTest,com.dolphin.schedule.ui.NativeAcademicImportTest,com.dolphin.schedule.ui.NativeFileImportTest,com.dolphin.schedule.ui.NativeHomeStyleTest,com.dolphin.schedule.ui.NativeBooksTest,com.dolphin.schedule.ui.NativeAppearanceTest,com.dolphin.schedule.ui.NativeTimetableTest,com.dolphin.schedule.ui.NativeLayoutTest,com.dolphin.schedule.ui.NativeJourneyTest,com.dolphin.schedule.ui.SupportScreensTest,com.dolphin.schedule.ui.NativeSupportFlowTest,com.dolphin.schedule.data.RepositoryTransactionTest com.dolphin.schedule.debug.test/androidx.test.runner.AndroidJUnitRunner
+adb -s emulator-5562 shell am instrument -w -e allowNativeDataTests true -e notClass com.dolphin.schedule.ui.DevicePreviewTest com.dolphin.schedule.debug.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 | 测试组 | 验证范围 |
@@ -71,12 +71,15 @@ adb -s emulator-5562 shell am instrument -w -e allowNativeDataTests true -e clas
 | 文件导入 | 内容 URI、多工作表、映射、错误行、仅时间更新、草稿和确认保护 |
 | 教材与外观 | 字段编辑、系统选图、相机约定、EXIF、私有草稿、背景压缩和取消保护 |
 | 导航行程 | 权限与地图结果、结束、期限、旧操作令牌和已删除功能清理 |
+| 地图与系统交互 | 高德客户端入口、网页回退、通知目标校验、预测式返回与取消、旧 WebView 独立进程 |
 | 更新与关于 | 正式版本内容、离线许可、精简引导和失败重试 |
 | 数据事务 | SQLite 回滚、并发、原文迁移备份和过期预览保护 |
 
 测试工作簿由 `scripts/build/native-import-fixtures.mjs` 生成，图片在测试时生成。系统选图测试只向隔离模拟器写入临时图片，结束后清理自身记录。学校测试使用合成结果，不代表真实学校网络、验证码和会话已经验证；组件更新测试也不代表 GitHub 当时可用。结果必须以本次实际执行日志为准，不沿用历史通过数。
 
 文件导入限制为源文件 5 MB，每表 3000 行/100 列；Excel 另限制解压总量 64 MB、总单元格 30 万。业务限制和错误保护应结合 JVM 测试验证，不能只凭界面显示成功判断数据完整。
+
+上面的模拟器命令明确排除 `DevicePreviewTest`：该组只接受下一节的独立验收包，直接在普通 debug 包中执行会触发保护条件。不要删除保护或给私人手机传入合成数据测试参数。
 
 ## 独立真机验收包
 
