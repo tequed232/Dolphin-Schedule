@@ -6,12 +6,13 @@
 |---|---|
 | `build.gradle.kts` | 包名、SDK、依赖、签名和资源生成；读取根 `dolphinVersion` |
 | `src/main/AndroidManifest.xml` | 启动入口、教务页、文件共享、通知及网络权限 |
-| `src/main/java/com/dolphin/schedule/ui/` | Compose 课表、导入、教材、设置、关于及其状态控制 |
-| `src/main/java/com/dolphin/schedule/domain/` | 课程、日期、节次、冲突、布局和导入规则 |
-| `src/main/java/com/dolphin/schedule/data/` | SQLite 事务、备份编解码、旧数据迁移及私有草稿 |
-| `src/main/java/com/dolphin/schedule/importing/` | JSON / CSV / Excel 解析、映射与预览 |
-| `src/main/java/com/dolphin/schedule/academic/` | 允许学校的浏览器、登录环境与识别控制 |
-| `src/main/java/com/dolphin/schedule/media/` | 封面与背景的本机压缩、方向校正 |
+| `src/main/kotlin/com/dolphin/schedule/ui/` | Compose 课表、导入、教材、设置、关于及其状态控制 |
+| `src/main/kotlin/com/dolphin/schedule/domain/` | 课程、日期、节次、冲突、布局和导入规则 |
+| `src/main/kotlin/com/dolphin/schedule/data/` | SQLite 事务、备份编解码、旧数据迁移及私有草稿 |
+| `src/main/kotlin/com/dolphin/schedule/importing/` | JSON / CSV / Excel 解析、映射与预览 |
+| `src/main/kotlin/com/dolphin/schedule/academic/` | 允许学校的浏览器、登录环境与识别控制 |
+| `src/main/kotlin/com/dolphin/schedule/notifications/` | 系统行程卡片、有效令牌、超时与到达接收器 |
+| `src/main/kotlin/com/dolphin/schedule/media/` | 封面与背景的本机压缩、方向校正 |
 | `src/main/assets/academic/extract.js` | 学校课表 DOM / 同源学期信息提取 |
 | `src/main/res/` | 品牌图、主题、系统图标、文件共享和备份规则 |
 | `src/test/` | Kotlin 业务与数据规则的 JVM 测试 |

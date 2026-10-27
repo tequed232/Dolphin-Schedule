@@ -48,9 +48,11 @@
 
 浏览页仅允许 `https://jwxt.gdcmxy.edu.cn:1004` 与 `https://sso.gdcmxy.edu.cn`（默认 HTTPS 端口或 443）。编辑地址不会扩展允许范围；证书失败停止连接。学校页面没有 Dolphin 业务能力桥，结果通过私有文件与请求标识交给原生页校验。
 
-会话使用 AndroidX WebKit 独立 Profile。勾选记住登录仅在本机保留站点会话，不主动读取或保存密码；清理只影响 `dolphin-academic-` 前缀配置，不删除默认 Profile 的旧课表库。取消保留时清理对应 Cookie 与站点存储，被 WebView 引擎占用的目录延迟到后续进程删除。
+会话优先使用 AndroidX WebKit 独立 Profile；缺少多 Profile 能力且 Android 版本不低于 9.0 时，使用 `:academic_legacy` 专用进程和独立数据目录。两条路径的登录状态彼此独立。勾选记住登录仅在本机保留站点会话，不主动读取或保存密码；清理针对当前路径的教务 Cookie 与站点存储，不删除默认 Profile 的旧课表库。多 Profile 路径只清理 `dolphin-academic-` 前缀配置，被 WebView 引擎占用的目录延迟到后续进程删除。
 
-设备 WebView 不支持 `MULTI_PROFILE` 时明确提示更新，保留文件导入入口，不退回共享登录配置。“WebView 不可用”需要核对设备组件支持与初始化阶段；不能靠更换 Kotlin 语法或忽略证书验证解决。
+设备 WebView 不支持 `MULTI_PROFILE` 时，Android 9.0 及以上走独立进程兼容路径；Android 8.x 明确提示更新，保留文件导入入口，不退回共享登录配置。兼容路径在任何 WebKit 调用前设置数据目录后缀。“WebView 不可用”需要核对设备组件支持与初始化阶段；不能靠更换 Kotlin 语法或忽略证书验证解决。
+
+版本验收记录见 [README 的 WebView 兼容性表](../README.md#内置教务导入的-webview-兼容性)：`154.0.8037.57` 已于 2026-10-27 在 RMX6688 上复验网页加载、登录保留和真实课表识别预览；`114.0.5.302` 的旧内核兼容修复仍待该确切版本验收，不能视为已支持，也不能由两个样本推导统一最低内核版本。
 
 ## 数据与实现位置
 
@@ -59,12 +61,13 @@
 | `academic/AcademicActivity.kt` | 地址、登录、学校页面、提取与私有结果回传 |
 | `academic/AcademicPolicy.kt` | HTTPS、主机、端口、课表路径与请求标识限制 |
 | `academic/AcademicProfileCleanup.kt` | 教务会话清理与占用目录延后删除 |
+| `academic/LegacyAcademicActivity.kt` | Android 9+ 的旧内核专用进程与独立 WebView 数据目录 |
 | `assets/academic/extract.js` | 构建内置的学校页面读取脚本 |
 | `domain/AcademicImporter.kt` | Kotlin 转换、校验、稳定 ID、差异及撤销 |
 | `data/AcademicCodec.kt` / `AcademicDraftStore.kt` | 结果解码、私有草稿和编辑基线 |
 | `ui/NativeImportScreen.kt` / `DolphinViewModel.kt` | 日期优先预览、确认、返回与事务接线 |
 
-表中 Kotlin 路径相对 `app/src/main/java/com/dolphin/schedule/`，资源路径相对 `app/src/main/`。这是内部学校适配结构，不提供第三方插件注册、远程脚本加载或插件市场。
+表中 Kotlin 路径相对 `app/src/main/kotlin/com/dolphin/schedule/`，资源路径相对 `app/src/main/`。这是内部学校适配结构，不提供第三方插件注册、远程脚本加载或插件市场。
 
 导入新课表和前后快照在同一 SQLite 事务保存。撤销仅保留最近一次，不能代替完整备份。草稿存在应用私有目录；Activity 状态保存标识，不塞入整份结果或图片。
 

@@ -12,10 +12,22 @@ Dolphin-Schedule/
 │  └─ src/
 │     ├─ main/
 │     │  ├─ AndroidManifest.xml
-│     │  ├─ java/com/dolphin/schedule/
+│     │  ├─ kotlin/com/dolphin/schedule/
 │     │  │  ├─ NativeActivity.kt
-│     │  │  ├─ Notifications.kt / JourneyState.kt
+│     │  │  ├─ notifications/        系统行程卡片、令牌与接收器
 │     │  │  ├─ ui/
+│     │  │  │  ├─ timetable/         课表、日期、课程详情与拖动
+│     │  │  │  ├─ settings/          设置首页与设置图标
+│     │  │  │  ├─ appearance/        主题、背景与安全区页面
+│     │  │  │  ├─ books/             教材管理与编辑
+│     │  │  │  ├─ importing/         教务与文件导入界面
+│     │  │  │  ├─ notifications/     行程开关、权限与状态界面
+│     │  │  │  ├─ support/           更新、关于与首次引导
+│     │  │  │  ├─ navigation/        胶囊与页面过渡
+│     │  │  │  ├─ common/            主题、安全区和系统栏
+│     │  │  │  ├─ DolphinApp.kt      页面组装
+│     │  │  │  ├─ DolphinViewModel.kt 共享页面状态
+│     │  │  │  └─ MainTab.kt          稳定的一级导航状态类型
 │     │  │  ├─ domain/
 │     │  │  ├─ data/
 │     │  │  ├─ importing/
@@ -23,8 +35,8 @@ Dolphin-Schedule/
 │     │  │  └─ media/
 │     │  ├─ assets/academic/extract.js
 │     │  └─ res/
-│     ├─ test/java/                  JVM 单元测试
-│     └─ androidTest/java/           Compose 与系统交互测试
+│     ├─ test/kotlin/                  JVM 单元测试
+│     └─ androidTest/kotlin/           Compose 与系统交互测试
 ├─ docs/                            当前使用与维护文档
 ├─ scripts/
 │  ├─ build/                        构建、隔离验收包与测试夹具生成
@@ -49,20 +61,20 @@ Dolphin-Schedule/
 └─ LICENSE                          项目 MIT 全文
 ```
 
-`java/` 是 Android 默认源码目录名，其中实际业务文件为 Kotlin，不表示使用 Java 重写应用。
+Kotlin 主源码、JVM 测试和设备测试分别统一位于 `src/main/kotlin/`、`src/test/kotlin/`、`src/androidTest/kotlin/`。文件夹与 Kotlin 包名保持对应；应用根包只保留启动入口。
 
 ## Android 目录与关键文件
 
-以下路径均相对 `app/src/main/java/com/dolphin/schedule/`。
+以下路径均相对 `app/src/main/kotlin/com/dolphin/schedule/`。
 
 | 文件或目录 | 作用 | 放置边界 |
 |---|---|---|
 | `NativeActivity.kt` | 正式启动、系统结果与通知返回路由 | Activity 负责系统生命周期，不塞入课程解析规则 |
 | `ui/DolphinApp.kt` | 页面框架、主题、胶囊和弹窗接线 | 组合页面，不直接操作 SQLite |
 | `ui/DolphinViewModel.kt` | 一级导航、选中日期、课程编辑和功能控制器 | 跨页面状态及用户意图 |
-| `ui/TimetableScreens.kt` / `TimetableBody.kt` | 列表和平铺、时间轴与课程布局 | 原生绘制、滚动和手势 |
-| `ui/LayoutCourse.kt` / `LayoutController.kt` | 长按预览、把手、滚动和确认保存 | 手势状态与业务规则分离 |
-| `ui/Book*` / `Appearance*` / `Support*` | 教材、外观、更新、关于和引导 | 各功能页面及状态 |
+| `ui/timetable/TimetableScreens.kt` / `TimetableBody.kt` | 列表和平铺、时间轴与课程布局 | 原生绘制、滚动和手势 |
+| `ui/timetable/LayoutCourse.kt` / `LayoutController.kt` | 长按预览、把手、滚动和确认保存 | 手势状态与业务规则分离 |
+| `ui/books/` / `ui/appearance/` / `ui/support/` | 教材、外观、更新、关于和引导 | 各功能页面及状态 |
 | `domain/` | 课程模型、日期、布局、导入、教材关联和校验 | 尽量保持可独立 JVM 测试，不直接操作 UI 或网络 |
 | `data/NativeRepository.kt` | SQLite 事务、已提交快照与冲突保护 | 一份应用持久数据，不为每个页面复制数据库 |
 | `data/AppDataCodec.kt` | 备份和数据库 JSON 编解码 | 兼容输入、边界校验与有界数据 |
@@ -71,8 +83,8 @@ Dolphin-Schedule/
 | `importing/` | 文件格式识别、Excel 解码、映射、预览和草稿 | 解码单元格与生成课表分别处理 |
 | `academic/` | 教务浏览器、访问白名单、会话和结果交接 | 不接管密码，不开放任意应用桥 |
 | `media/` | 本地图片压缩、方向校正和有界缓存 | 图片只在本机处理 |
-| `Notifications.kt` / `JourneyState.kt` | 导航后的行程展示、令牌和旧功能清理 | 不创建课前提醒或常驻桌宠 |
-| `NotificationRoute.kt` | 点击通知后的原生课程路由 | 校验目标，避免错误打开过期课程 |
+| `notifications/Notifications.kt` / `JourneyState.kt` | 导航后的行程展示、令牌和旧功能清理 | 不创建课前提醒或常驻桌宠 |
+| `notifications/NotificationRoute.kt` | 点击通知后的原生课程路由 | 校验目标，避免错误打开过期课程 |
 
 ## 资源放在哪里
 
@@ -115,6 +127,6 @@ Dolphin-Schedule/
 
 ## 新内容应该放在哪里
 
-新增页面先放 `ui/`，可复用业务计算放 `domain/`；只有数据落盘、文件或迁移相关代码进入 `data/`。新导入格式放 `importing/`，学校适配放 `academic/` 和对应提取脚本。系统能力在 Kotlin 中接入，并同步 Manifest、权限文档及相关设备测试。
+新增页面放入 `ui/` 下对应功能目录；仅全局页面框架与共享路由留在 `ui/` 根层。系统行程放 `notifications/`，版本比较放 `domain/`。可复用业务计算放 `domain/`；只有数据落盘、文件或迁移相关代码进入 `data/`。新导入格式放 `importing/`，学校适配放 `academic/` 和对应提取脚本。系统能力在 Kotlin 中接入，并同步 Manifest、权限文档及相关设备测试。
 
 新增文件时同步源码准入、构建输入、文档链接和必要测试。删除功能时一并删除入口、实现、权限、接收器、测试和旧说明，不能只隐藏按钮。提交说明中的 `feat`、`fix`、`build`、`docs` 保持英文类型，冒号后使用中文解释目的。

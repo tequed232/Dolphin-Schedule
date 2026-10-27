@@ -5,8 +5,8 @@ import vm from 'node:vm';
 const read=file=>readFile(file,'utf8');
 const [manifest,gradle,properties,pkg,reader,extract,decoder]=await Promise.all([
  'app/src/main/AndroidManifest.xml','app/build.gradle.kts','gradle.properties','package.json',
- 'app/src/main/java/com/dolphin/schedule/data/LegacyDataReader.kt',
- 'app/src/main/assets/academic/extract.js','app/src/main/java/com/dolphin/schedule/importing/SpreadsheetDecoder.kt',
+ 'app/src/main/kotlin/com/dolphin/schedule/data/LegacyDataReader.kt',
+ 'app/src/main/assets/academic/extract.js','app/src/main/kotlin/com/dolphin/schedule/importing/SpreadsheetDecoder.kt',
 ].map(read));
 const version=properties.match(/^dolphinVersion=(\d+\.\d+\.\d+)\s*$/m)?.[1];
 assert.ok(version,'缺少统一应用版本');
@@ -19,7 +19,7 @@ assert.deepEqual(permissions,['android.permission.INTERNET','android.permission.
 assert.equal([...manifest.matchAll(/android.intent.category.LAUNCHER/g)].length,1);
 assert.match(manifest,/<activity android:name="\.NativeActivity"[\s\S]*?<category android:name="android.intent.category.LAUNCHER"/);
 assert.doesNotMatch(manifest,/MainActivity|ReminderReceiver|Calendar|BOOT_COMPLETED|SCHEDULE_EXACT_ALARM/);
-for(const retired of ['ui/src','app/src/main/java/com/dolphin/schedule/MainActivity.kt','app/src/main/java/com/dolphin/schedule/CalendarSync.kt','app/src/main/java/com/dolphin/schedule/SystemHolidays.kt','app/src/main/java/com/dolphin/schedule/ReminderScheduler.kt']) {
+for(const retired of ['ui/src','app/src/main/kotlin/com/dolphin/schedule/MainActivity.kt','app/src/main/kotlin/com/dolphin/schedule/CalendarSync.kt','app/src/main/kotlin/com/dolphin/schedule/SystemHolidays.kt','app/src/main/kotlin/com/dolphin/schedule/ReminderScheduler.kt']) {
  assert.equal(await access(retired).then(()=>true,()=>false),false,`废弃实现仍存在：${retired}`);
 }
 assert.match(reader,/indexedDB\.open\('dolphin-schedule'\)/);

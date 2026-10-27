@@ -15,13 +15,13 @@ Dolphin Schedule 的界面与关键业务由 Kotlin＋Jetpack Compose 实现。`
 
 | 层 | 主要位置 | 职责 |
 |---|---|---|
-| 页面 | `app/src/main/java/com/dolphin/schedule/ui/` | 原生绘制、触摸、无障碍、输入和系统结果入口 |
+| 页面 | `app/src/main/kotlin/com/dolphin/schedule/ui/` | 原生绘制、触摸、无障碍、输入和系统结果入口 |
 | 状态 | `DolphinViewModel` 及功能 Controller | 页面路由、选中日期、草稿、异步任务、错误和确认状态 |
 | 业务 | `domain/` | 课程、周次、布局、冲突、节次、教材关联及纯转换规则 |
 | 持久化 | `data/` | SQLite、编码、事务、迁移及应用私有草稿文件 |
 | 文件导入 | `importing/` | JSON / CSV / Excel 单元格处理、工作表、映射和预览 |
 | 教务 | `academic/` 与 `assets/academic/extract.js` | 学校访问限制、用户登录、页面识别与结果回传 |
-| 系统能力 | Kotlin 根包与 `media/` | 主动导航、行程通知、文件共享、图片处理 |
+| 系统能力 | `notifications/` 与 `media/` | 主动导航、行程通知、文件共享、图片处理 |
 
 ## 一份已提交数据
 
@@ -35,11 +35,11 @@ Dolphin Schedule 的界面与关键业务由 Kotlin＋Jetpack Compose 实现。`
 
 | 用途 | 读取内容 | 边界 |
 |---|---|---|
-| 学校教务 | 用户允许学校的 HTTPS 页面 | 独立教务 Profile；用户自己登录；只提取课表与同源学期信息，外部页面没有应用业务能力桥 |
+| 学校教务 | 用户允许学校的 HTTPS 页面 | 独立教务 Profile，或 Android 9+ 专用进程与独立数据目录；用户自己登录；只提取课表与同源学期信息，外部页面没有应用业务能力桥 |
 | Excel 解码 | 构建内置的 SheetJS 与所选文件字节 | 无界面、本地来源、禁止网络和外部文件访问；只返回单元格，课程规则和保存仍由 Kotlin 处理 |
 | 首次升级迁移 | 旧本地来源的 IndexedDB `dolphin-schedule` | 仅 SQLite 尚无数据时读取；返回本地状态后销毁；不加载旧业务 HTML，不请求网络，不删除旧库 |
 
-Android 系统 WebView 是这些能力的运行环境，不是 Compose 的页面渲染器。教务隔离配置不可用时应明确报错并保留课表；更新系统 WebView 后再重试。不能通过降低学校访问或证书限制来绕开错误。
+Android 系统 WebView 是这些能力的运行环境，不是 Compose 的页面渲染器。缺少多 Profile 能力时，Android 9+ 在 `:academic_legacy` 进程中先设置 WebView 数据目录后缀，再初始化浏览器；较新内核仍使用原有 Profile，不迁移用户登录。两种隔离路径均不可用时明确报错并保留课表；更新系统 WebView 后再重试。不能通过降低学校访问或证书限制来绕开错误。确切内核版本的验收范围见 [README](../README.md#内置教务导入的-webview-兼容性)。
 
 ## 导入与草稿
 
@@ -62,3 +62,7 @@ Android 系统 WebView 是这些能力的运行环境，不是 Compose 的页面
 - 合成 Excel 工作簿只生成到测试资源；设备截图、日志、工具链和 APK 放在忽略目录。
 
 目录规则见 [目录指南](directory-structure.md)，数据范围见 [数据与迁移](data-and-migration.md)，验证入口见 [开发说明](development.md)。
+
+## 功能目录边界
+
+`ui/` 根层保留 `DolphinApp` 和共享 `DolphinViewModel`；页面及其控制器归入 timetable、settings、appearance、books、importing、notifications、support、navigation。主题与系统栏等共用代码放 common。系统通知实现放独立的 `notifications/`，与通知设置页面分开。所有源码与测试使用 kotlin 源目录，文件路径与包名一致。

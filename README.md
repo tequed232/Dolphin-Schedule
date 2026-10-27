@@ -30,6 +30,22 @@ App 默认显示主题底色，不内置背景图片。通知仅用于用户主�
 
 卸载或清除应用数据会删除本地内容。正式包为 `com.dolphin.schedule`，调试包另加 `.debug`，不同包名的数据彼此独立。更名前的旧包不能直接覆盖安装，请先导出课表 JSON；同包旧版本首次升级时可读取本机旧数据并转入原生数据库，详见 [迁移说明](docs/data-and-migration.md)。
 
+## 内置教务导入的 WebView 兼容性
+
+**目前明确确认可用的系统 WebView 版本是 `154.0.8037.57`。** 2026-10-27 在 RMX6688 真机通过 ADB 复验：保留数据升级后，教务页可以打开，记住的登录状态保留，并进入真实学校课表的识别预览。以下记录区分实际使用结果与尚待验证的兼容代码：
+
+| 系统 WebView 版本 / 环境 | 内置教务导入状态 | 说明 |
+|---|---|---|
+| `154.0.8037.57` | 已确认可用 | RMX6688 真机复验通过网页加载、登录保留和课表识别预览；此前用户也确认导入正常。不代表所有厂商的同版本设备均已测试 |
+| `114.0.5.302` | 已有不可用反馈，兼容修复待验证 | 已发布版本存在兼容问题；当前源码新增旧内核隔离路径，但尚未在这个确切版本上完成登录和课表导入验收 |
+| 其他版本 | 按运行时能力判断，未逐个版本验证 | 版本号本身不能保证学校页面和登录流程可用 |
+
+当前源码优先使用 WebView 的 `MULTI_PROFILE` 能力隔离教务登录；不支持该能力时，在 **Android 9.0（API 28）及以上**使用专用进程和独立 WebView 数据目录。Android 8.x 上若缺少多 Profile 能力，则需要更新系统 WebView，或改用文件导入。这里的 Android 9.0 是兼容路径的系统要求，**不是 WebView 最低版本号**；兼容路径属于尚未发布的源码变更，不能据此认定已下载的 v1.6.0 安装包已经支持旧内核。
+
+暂时不承诺“WebView 某一版本以上全部可用”：不同厂商提供的能力和学校页面兼容性可能不同。实现依据见 Android 官方的 [WebView 独立数据目录](https://developer.android.com/reference/android/webkit/WebView#setDataDirectorySuffix(java.lang.String)) 和 [WebKit Profile](https://developer.android.com/reference/androidx/webkit/Profile) 说明。
+
+遇到问题时，请在系统应用信息中查看 **Android System WebView**，或在开发者选项的“WebView 实现”中确认当前提供组件及版本；Chrome 版本不一定等于 App 实际使用的 WebView 版本。反馈时附上 App、Android 和 WebView 版本，以及停在登录、加载还是识别阶段。加载或识别失败不会替换已有课表，仍可使用文件导入。
+
 ## 技术栈
 
 | 层级 | 技术与职责 |
@@ -49,8 +65,18 @@ App 默认显示主题底色，不内置背景图片。通知仅用于用户主�
 ```text
 app/
   src/main/
-    java/com/dolphin/schedule/
-      ui/                    Compose 页面、交互与页面状态
+    kotlin/com/dolphin/schedule/
+      ui/                    Compose 页面框架与共享状态
+        timetable/           课表、课程详情、作息与拖动
+        settings/            设置入口与图标
+        appearance/          背景与外观页面
+        books/               教材页面和编辑状态
+        importing/           导入界面
+        notifications/       行程设置与权限交接
+        support/             引导、更新与关于
+        navigation/          胶囊与页面过渡
+        common/              主题、安全区与系统栏
+      notifications/         系统行程卡片、令牌与接收器
       domain/                课程、日期、布局和业务校验
       data/                  SQLite、备份编解码与旧数据迁移
       importing/             文件解析、映射和导入草稿

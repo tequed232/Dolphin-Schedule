@@ -35,7 +35,7 @@
 | `app/src/main/res/drawable-nodpi/app_icon.webp` | 唯一品牌源图与应用图标 |
 | `app/src/main/res/drawable-nodpi/live_icon.webp` | 系统通知的小尺寸品牌图 |
 | `app/src/main/res/drawable/ic_notification.xml` | 系统着色的单色通知图标 |
-| `app/src/main/java/com/dolphin/schedule/ui/CapsuleNavigation.kt` | Compose 绘制的胶囊导航图形 |
+| `app/src/main/kotlin/com/dolphin/schedule/ui/navigation/CapsuleNavigation.kt` | Compose 绘制的胶囊导航图形 |
 
 旧 Web 资源清单、SVG 子集和生成品牌副本均已移除。替换资源时同步源码准入、第三方说明与必要验证，不引入网络字体作为离线使用的前提。生成资源放 `app/build/`，设备截图与测试图片放忽略的 `build/`，不随源码分发。
 

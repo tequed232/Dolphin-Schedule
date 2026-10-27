@@ -178,7 +178,7 @@
     "gradlew.bat",
     "gradle/wrapper/gradle-wrapper.properties",
     "gradle/wrapper/gradle-wrapper.jar",
-    "app/src/main/java/com/dolphin/schedule/NativeActivity.kt",
+    "app/src/main/kotlin/com/dolphin/schedule/NativeActivity.kt",
     "app/src/main/assets/academic/extract.js",
     "app/src/main/res/drawable-nodpi/app_icon.webp"
   ],
