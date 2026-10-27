@@ -37,4 +37,16 @@ class CourseNotificationPresentationTest {
     @Test fun unavailableBookDoesNotAddPlaceholderNoise() {
         for(book in listOf("","  ","尚未标记"))assertEquals("正在前往教室",courseNotificationPresentation("课程","16栋203号教室",book).text)
     }
+    @Test fun academicRoomCodeProducesReadableBuildingAndDestinationWithoutGuessingOtherPlaces() {
+        for((raw,building,action) in listOf(
+            Triple("1-401 (QY1-401)","1栋","去1栋401号教室"),
+            Triple("16-203（QY16-203）","16栋","去16栋203号教室"),
+            Triple("3-402 (QY54)","3栋","去3栋402号教室"),
+            Triple("27-305","27栋","去27栋305号教室"),
+            Triple("操场西区","去上课","去操场西区"),
+        )) {
+            val view=courseNotificationPresentation("课程",raw)
+            assertEquals(building,view.collapsedBuilding);assertEquals(action,view.destinationAction)
+        }
+    }
 }

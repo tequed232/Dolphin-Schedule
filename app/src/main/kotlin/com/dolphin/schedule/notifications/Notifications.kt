@@ -120,7 +120,8 @@ object Notifications {
             .addAction(Notification.Action.Builder(null,presentation.destinationAction,map).build())
             .addAction(Notification.Action.Builder(null,"我到了",action(context,STOP_ACTION,11,token))
                 .addExtras(android.os.Bundle().apply { putBoolean("android.support.action.showsUserInterface",false) }).build())
-        if(colorOSIcon)builder.setSmallIcon(Icon.createWithResource(context,R.drawable.live_icon))
+        // ColorOS 已把彩色 smallIcon 放在卡片右上；largeIcon 会再生成一张左侧大图。
+        if(colorOSIcon)builder.setSmallIcon(Icon.createWithResource(context,R.drawable.live_icon)).setLargeIcon(null as Icon?)
         if(Build.VERSION.SDK_INT>=36)builder.addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing",true) })
             .setShortCriticalText(presentation.collapsedBuilding)
         try { manager.notify(JOURNEY_ID,builder.build()) } catch(_: SecurityException) { return false }

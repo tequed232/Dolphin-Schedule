@@ -1,6 +1,6 @@
 package com.dolphin.schedule.ui.timetable
 
-import androidx.activity.compose.BackHandler
+import com.dolphin.schedule.ui.navigation.rememberPredictivePageBack
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -88,9 +88,9 @@ fun CourseEditor(plan: EditPlan,data: AppData,model: DolphinViewModel) {
     fun close() { if(model.busy)return;if(dirty)discard=true else model.cancelEdit() }
     Dialog(onDismissRequest={close()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false,dismissOnBackPress=false)) {
         SystemBarAppearance()
-        BackHandler { close() }
+        val predictiveBack=rememberPredictivePageBack(enabled=true,route=plan.seed.id) { close() }
         Scaffold(
-            modifier=Modifier.fillMaxSize().imePadding(),containerColor=MaterialTheme.colorScheme.background,
+            modifier=Modifier.fillMaxSize().imePadding().then(predictiveBack),containerColor=MaterialTheme.colorScheme.background,
             contentWindowInsets=insets,
             topBar={Row(Modifier.windowInsetsPadding(insets.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal)).fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
                 TextButton(onClick={close()},enabled=!model.busy) { Text("取消") }

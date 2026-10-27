@@ -27,6 +27,7 @@ import org.json.JSONObject
 import org.junit.*
 import org.junit.Assert.*
 import org.junit.rules.ExternalResource
+import java.io.File
 
 /** 只在显式授权的隔离模拟器运行；绝不向真机写入合成课表或通知。 */
 class NativeJourneyTest {
@@ -95,6 +96,15 @@ class NativeJourneyTest {
         assertFalse(notice.extras.getBoolean(Notification.EXTRA_COLORIZED))
         assertTrue(notice.flags and Notification.FLAG_ONGOING_EVENT!=0)
         if(Build.VERSION.SDK_INT>=36)assertTrue(notice.hasPromotableCharacteristics())
+        try {
+            instrumentation.uiAutomation.executeShellCommand("cmd statusbar expand-notifications").close()
+            SystemClock.sleep(700)
+            val image=requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+            File(context.cacheDir,"journey-standard-expanded.png").outputStream().use {
+                image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)
+            }
+            image.recycle()
+        } finally { instrumentation.uiAutomation.executeShellCommand("cmd statusbar collapse").close() }
     }
 
     @Test fun settingsOnlyContainNavigationJourneyAndResumeDoesNotCreateNotification() {

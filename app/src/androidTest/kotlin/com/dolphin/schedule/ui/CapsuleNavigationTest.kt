@@ -3,6 +3,7 @@ package com.dolphin.schedule.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import androidx.test.platform.app.InstrumentationRegistry
 import com.dolphin.schedule.domain.Preferences
 import com.dolphin.schedule.ui.common.DolphinTheme
@@ -36,6 +38,7 @@ import com.dolphin.schedule.ui.navigation.rememberPageMotion
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertTrue
 
 class CapsuleNavigationTest {
     @get:Rule val compose=createComposeRule()
@@ -88,6 +91,30 @@ class CapsuleNavigationTest {
             compose.mainClock.advanceTimeBy(400)
             compose.onNodeWithText("当前页面：设置").assertIsDisplayed()
             compose.onNodeWithText("当前页面：列表").assertDoesNotExist()
+        } finally { compose.mainClock.autoAdvance=true }
+    }
+    @Test fun reversingAnUnfinishedPageTransitionDoesNotJumpToTheOppositeOrigin() {
+        val selected=mutableStateOf(MainTab.LIST)
+        compose.setContent {
+            DolphinTheme(Preferences(dynamicColor=false)) {
+                Box(Modifier.width(300.dp)) {
+                    Box(Modifier.then(rememberPageMotion(selected.value,null,0,reduced=false))
+                        .size(48.dp).testTag("moving-page"))
+                }
+            }
+        }
+        compose.mainClock.autoAdvance=false
+        try {
+            compose.runOnIdle { selected.value=MainTab.GRID }
+            compose.mainClock.advanceTimeBy(32)
+            val previous=compose.onNodeWithTag("moving-page").fetchSemanticsNode().boundsInRoot.left
+            assertTrue("第一段移动应已开始",previous>0f)
+            compose.runOnIdle { selected.value=MainTab.LIST }
+            compose.mainClock.advanceTimeBy(16)
+            val reversed=compose.onNodeWithTag("moving-page").fetchSemanticsNode().boundsInRoot.left
+            assertTrue("反向切换应延续当前绘制位置",reversed>0f && reversed<=previous+1f)
+            compose.mainClock.advanceTimeBy(400)
+            assertTrue(compose.onNodeWithTag("moving-page").fetchSemanticsNode().boundsInRoot.left<1f)
         } finally { compose.mainClock.autoAdvance=true }
     }
     private fun saveCapsule(name: String) {

@@ -11,12 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -25,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dolphin.schedule.R
+import com.dolphin.schedule.ui.common.DolphinSymbol
 import com.dolphin.schedule.domain.*
 import com.dolphin.schedule.ui.DolphinViewModel
 import com.dolphin.schedule.ui.NativePage
@@ -106,7 +102,8 @@ internal fun HomeDateStrip(data: AppData,model: DolphinViewModel) {
                             Column(Modifier.padding(vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                                 Text(WeekNames[day.dayOfWeek.value-1],style=MaterialTheme.typography.bodySmall)
                                 Text(day.dayOfMonth.toString().padStart(2,'0'),fontSize=30.sp,fontWeight=FontWeight.SemiBold,color=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
-                                Canvas(Modifier.size(4.dp)) { if(day==LocalDate.now())drawCircle(if(selected)androidx.compose.ui.graphics.Color(0xFF073338) else androidx.compose.ui.graphics.Color(0xFF79D7DA)) }
+                                val todayDot=if(selected)MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                Canvas(Modifier.size(4.dp)) { if(day==LocalDate.now())drawCircle(todayDot) }
                             }
                         }
                     }
@@ -124,13 +121,13 @@ internal fun NextCourseCard(value: HomeCourse,data: AppData,model: DolphinViewMo
         Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surface,contentColor=MaterialTheme.colorScheme.primary) { Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) { HomeSymbol(HomeIcon.CLOCK) } }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                Text(value.title,color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelMedium)
-                Text(c.name,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onSurface,maxLines=2,overflow=TextOverflow.Ellipsis)
-                Text(c.room.ifBlank { "教室待填写" },style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(value.title,color=MaterialTheme.colorScheme.onPrimaryContainer,style=MaterialTheme.typography.labelMedium)
+                Text(c.name,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer,maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(c.room.ifBlank { "教室待填写" },style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha=.85f),maxLines=2,overflow=TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                if(data.settings.showTimes)Text(data.schedule.periods[c.start-1].start,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.primary)
-                Text("查看详情",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+                if(data.settings.showTimes)Text(data.schedule.periods[c.start-1].start,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("查看详情",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
     }
@@ -138,21 +135,17 @@ internal fun NextCourseCard(value: HomeCourse,data: AppData,model: DolphinViewMo
 
 internal enum class HomeIcon { ADD,IMPORT,CALENDAR,CLOCK,BACK,NEXT,NAVIGATE }
 
-/** 与旧版线性图标一致，不额外引入整包图标资源。 */
+/** 首页和设置共用同一套 24dp 圆角 Material Symbols。 */
 @Composable
 internal fun HomeSymbol(icon: HomeIcon,modifier: Modifier=Modifier,color: androidx.compose.ui.graphics.Color=LocalContentColor.current) {
-    Canvas(modifier.size(24.dp)) {
-        val u=size.minDimension/24;val stroke=Stroke(1.7f*u,cap=StrokeCap.Round)
-        fun p(x: Float,y: Float)=Offset(x*u,y*u)
-        fun line(x: Float,y: Float,x2: Float,y2: Float)=drawLine(color,p(x,y),p(x2,y2),1.7f*u,StrokeCap.Round)
-        when(icon) {
-            HomeIcon.ADD -> { line(12f,4f,12f,20f);line(4f,12f,20f,12f) }
-            HomeIcon.CLOCK -> { drawCircle(color,9*u,p(12f,12f),style=stroke);line(12f,6f,12f,12f);line(12f,12f,16f,15f) }
-            HomeIcon.CALENDAR -> { drawRoundRect(color,p(3f,5f),Size(18*u,16*u),CornerRadius(2*u),style=stroke);line(3f,10f,21f,10f);line(7f,3f,7f,7f);line(17f,3f,17f,7f);for(y in listOf(14f,17f))for(x in listOf(8f,12f,16f))drawCircle(color,.8f*u,p(x,y)) }
-            HomeIcon.IMPORT -> { val path=Path().apply { moveTo(5*u,2*u);lineTo(14*u,2*u);lineTo(20*u,8*u);lineTo(20*u,22*u);lineTo(5*u,22*u);close();moveTo(14*u,2*u);lineTo(14*u,8*u);lineTo(20*u,8*u) };drawPath(path,color,style=stroke);line(12f,18f,12f,11f);line(9f,14f,12f,11f);line(12f,11f,15f,14f) }
-            HomeIcon.BACK -> { line(14f,6f,8f,12f);line(8f,12f,14f,18f) }
-            HomeIcon.NEXT -> { line(10f,6f,16f,12f);line(16f,12f,10f,18f) }
-            HomeIcon.NAVIGATE -> { val path=Path().apply { moveTo(21*u,3*u);lineTo(15*u,21*u);lineTo(10*u,14*u);lineTo(3*u,9*u);close() };drawPath(path,color,style=stroke) }
-        }
+    val resource=when(icon) {
+        HomeIcon.ADD->R.drawable.ms_add
+        HomeIcon.CLOCK->R.drawable.ms_schedule
+        HomeIcon.CALENDAR->R.drawable.ms_calendar_month
+        HomeIcon.IMPORT->R.drawable.ms_upload_file
+        HomeIcon.BACK->R.drawable.ms_chevron_left
+        HomeIcon.NEXT->R.drawable.ms_chevron_right
+        HomeIcon.NAVIGATE->R.drawable.ms_near_me
     }
+    DolphinSymbol(resource,modifier,color)
 }

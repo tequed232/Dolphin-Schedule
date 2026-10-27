@@ -7,6 +7,7 @@
 | SheetJS CE，`@e965/xlsx` 分发 | 0.20.3，由 `package-lock.json` 锁定 | 本地 XLS / XLSX 单元格解码；测试时生成合成工作簿 | Apache-2.0 |
 | Kotlin | 2.0.21 | 原生界面、课表业务、数据及系统能力 | Apache-2.0 |
 | AndroidX Compose / Material 3 | BOM 2025.04.01 | 原生页面、主题、手势与动画 | Apache-2.0 |
+| Google Material Symbols Rounded | 固定提交 `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`，24 个 Android 矢量 | 导航、首页与设置图标；仅本地子集 | Apache-2.0 |
 | AndroidX Activity Compose | 1.10.1 | Activity、系统结果与 Compose 接入 | Apache-2.0 |
 | AndroidX Lifecycle | 2.8.7 | ViewModel、生命周期与状态收集 | Apache-2.0 |
 | AndroidX WebKit | 1.12.1 | 学校浏览器的隔离配置与 WebView 兼容 | Apache-2.0 |
@@ -23,4 +24,4 @@ Apache-2.0 全文位于 [legal/APACHE-2.0.txt](legal/APACHE-2.0.txt)。SheetJS �
 
 应用内“关于”将根 MIT、本说明和 Apache-2.0 正文作为离线资源随应用分发。构建使用 Gradle 的实际依赖树以及 `package-lock.json` 固定的 Excel 解码器；新增或替换依赖时同步维护本说明与所需版权材料。
 
-应用品牌图由项目作者提供。Compose 导航图形与系统单色图标由项目维护，不再分发原 Web 界面的 React、Material Symbols SVG 子集、Vite 或 TypeScript。
+应用品牌图由项目作者提供。Material Symbols 来源、子集与修改见 [资源来源](legal/material-symbols.md)，Google 上游为 [material-design-icons](https://github.com/google/material-design-icons)。系统通知的品牌图与单色图标由项目维护。不再分发原 Web 界面的 React、SVG 字体子集、Vite 或 TypeScript。

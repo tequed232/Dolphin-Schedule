@@ -2,7 +2,6 @@ package com.dolphin.schedule.ui.navigation
 
 import com.dolphin.schedule.ui.MainTab
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -10,6 +9,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.dolphin.schedule.ui.NativePage
+import com.dolphin.schedule.ui.common.DolphinMotion
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private data class PageLocation(val tab: MainTab,val page: NativePage?,val depth: Int)
 private class PageMotionHistory(var location: PageLocation)
@@ -19,17 +22,30 @@ private class PageMotionHistory(var location: PageLocation)
 internal fun rememberPageMotion(tab: MainTab,page: NativePage?,depth: Int,reduced: Boolean): Modifier {
     val current=PageLocation(tab,page,depth)
     val history=remember { PageMotionHistory(current) }
-    val direction=remember(current) {
+    val translation=remember { Animatable(0f) }
+    val opacity=remember { Animatable(1f) }
+    val distance=with(LocalDensity.current) { 18.dp.toPx() }
+    LaunchedEffect(current,reduced) {
         val previous=history.location
-        when { current==previous->0f;depth!=previous.depth->if(depth>previous.depth)1f else -1f;tab!=previous.tab->if(tab.ordinal>previous.tab.ordinal)1f else -1f;else->1f }
+        history.location=current
+        if(reduced) { translation.snapTo(0f);opacity.snapTo(1f);return@LaunchedEffect }
+        if(current==previous)return@LaunchedEffect
+        val direction=when {
+            depth!=previous.depth->if(depth>previous.depth)1f else -1f
+            tab!=previous.tab->if(tab.ordinal>previous.tab.ordinal)1f else -1f
+            else->1f
+        }
+        // 快速反向切换从当前绘制位置继续，取消上一段动画时不重置到起点。
+        if(abs(translation.value)<.1f && opacity.value>.999f) {
+            translation.snapTo(distance*direction);opacity.snapTo(.92f)
+        }
+        coroutineScope {
+            launch { translation.animateTo(0f,tween(DolphinMotion.PAGE,easing=DolphinMotion.enter)) }
+            launch { opacity.animateTo(1f,tween(DolphinMotion.SELECTION,easing=DolphinMotion.standard)) }
+        }
     }
-    val progress=remember(current) { Animatable(if(direction==0f)1f else 0f) }
-    SideEffect { history.location=current }
-    LaunchedEffect(progress,reduced) { progress.animateTo(1f,tween(if(reduced)100 else 180,easing=FastOutSlowInEasing)) }
-    val distance=with(LocalDensity.current) { 12.dp.toPx() }
     return Modifier.graphicsLayer {
-        // 保留可读的首帧，快速切换时不会反复闪成整页空白。
-        alpha=.82f+.18f*progress.value
-        translationX=if(reduced)0f else (1f-progress.value)*distance*direction
+        alpha=opacity.value
+        translationX=translation.value
     }
 }

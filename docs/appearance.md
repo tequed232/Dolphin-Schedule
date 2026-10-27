@@ -4,7 +4,7 @@
 
 ## 使用外观设置
 
-在“设置 → 外观”调整深浅模式、文字尺寸和背景。深浅模式可跟随系统；Android 的动态取色依赖受支持的系统环境。原生主题沿用项目的青色强调色、灰色表面和五组课程配色。
+在“设置 → 外观”调整深浅模式、文字尺寸和背景。深浅模式可跟随系统；Android 12 及以上的动态取色成套使用 Material 3 的主色、辅助色、容器和容器文字，避免只更换按钮主色造成蓝色与青色混搭。中性表面保留 Dolphin 的灰色层级，避免厂商高饱和动态表面淹没时间卡片。关闭动态取色时保留 Dolphin 青色和五组课程配色。课程自选颜色不被主题开关改写。
 
 在“背景”页面选择 JPG、PNG 或 WebP。单张不超过 10 MB，图片在本机处理、缩小和保存，不上传；推荐使用 1080×1920 或 1440×2560 的竖图。居中铺满会按屏幕裁去部分边缘。
 
@@ -28,6 +28,8 @@
 
 胶囊切换移除了叠加的尺寸动画；空课表格使用 Canvas 批量绘制，课程布局按课表与日期缓存。页面滚动状态随标签保存，350 ms 内重复的列表/平铺偏好保存会合并，数据没有变化时不重复提交 SQLite。真机帧耗时由独立验收测试记录，调试包结果用于前后对比，不代表所有设备的帧率保证。
 
+胶囊以 200 ms 的平滑曲线移动选中背景，按下时提供轻微缩放与主题色反馈，选中图标使用实心版本。页面以 220 ms 的短距离移动和淡入切换；连续反向点击从当前绘制位置继续，不重置动画起点，不复制或动画测量整份课表。降低效果时关闭页面位移与胶囊移动，系统动画时长设置仍由 Compose 尊重。
+
 ## 资源与维护
 
 | 资源 | 用途 |
@@ -35,9 +37,11 @@
 | `app/src/main/res/drawable-nodpi/app_icon.webp` | 唯一品牌源图与应用图标 |
 | `app/src/main/res/drawable-nodpi/live_icon.webp` | 系统通知的小尺寸品牌图 |
 | `app/src/main/res/drawable/ic_notification.xml` | 系统着色的单色通知图标 |
-| `app/src/main/kotlin/com/dolphin/schedule/ui/navigation/CapsuleNavigation.kt` | Compose 绘制的胶囊导航图形 |
+| `app/src/main/kotlin/com/dolphin/schedule/ui/navigation/CapsuleNavigation.kt` | 胶囊的布局、反馈和选中动画 |
+| `app/src/main/res/drawable/ms_*.xml` | Material Symbols Rounded 离线矢量子集 |
+| `app/src/main/kotlin/com/dolphin/schedule/ui/common/DolphinSymbols.kt` / `DolphinMotion.kt` | 统一图标着色与动效参数 |
 
-旧 Web 资源清单、SVG 子集和生成品牌副本均已移除。替换资源时同步源码准入、第三方说明与必要验证，不引入网络字体作为离线使用的前提。生成资源放 `app/build/`，设备截图与测试图片放忽略的 `build/`，不随源码分发。
+旧 Web 资源清单、SVG 子集和生成品牌副本均已移除。当前 Android 矢量子集独立记录在 [Material Symbols 来源](../legal/material-symbols.md)，没有网络字体依赖。替换资源时同步源码准入、第三方说明与必要验证。生成资源放 `app/build/`，设备截图与测试图片放忽略的 `build/`，不随源码分发。
 
 导航、课程、文本与图片应适配窄屏/宽屏、横屏/竖屏和深浅模式。应用不提供电脑模式或手动屏幕方向切换按钮。项目代码采用 [MIT](../LICENSE)，作者品牌图和第三方资源的来源见 [第三方说明](../THIRD_PARTY_NOTICES.md)。
 

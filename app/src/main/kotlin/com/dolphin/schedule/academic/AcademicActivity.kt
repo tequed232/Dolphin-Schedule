@@ -22,6 +22,9 @@ import android.webkit.*
 import android.widget.*
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.BackEventCompat
 import androidx.webkit.Profile
 import androidx.webkit.ProfileStore
 import androidx.webkit.WebViewCompat
@@ -32,7 +35,7 @@ import java.util.UUID
 import org.json.JSONObject
 
 /** 教务内容进入独立 Profile 或专用进程的数据目录，永不安装 Dolphin 原生桥。 */
-open class AcademicActivity : Activity() {
+open class AcademicActivity : ComponentActivity() {
     protected open val legacyIsolation: Boolean=false
     protected open fun prepareStorage() {}
     private var browser: WebView? = null
@@ -48,12 +51,29 @@ open class AcademicActivity : Activity() {
     private var pageFailure = false
     private var requestId = ""
     private val handler = Handler(Looper.getMainLooper())
+    private val browserBack=object: OnBackPressedCallback(false) {
+        override fun handleOnBackStarted(backEvent: BackEventCompat) { browser?.animate()?.cancel() }
+        override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+            browser?.let { view ->
+                val value=backEvent.progress.coerceIn(0f,1f)
+                view.scaleX=1f-.06f*value;view.scaleY=view.scaleX
+                view.translationX=dp(12)*value*if(backEvent.swipeEdge==BackEventCompat.EDGE_LEFT)1f else -1f
+            }
+        }
+        override fun handleOnBackCancelled() {
+            browser?.animate()?.scaleX(1f)?.scaleY(1f)?.translationX(0f)?.setDuration(160)?.start()
+        }
+        override fun handleOnBackPressed() {
+            browser?.let { it.animate().cancel();it.scaleX=1f;it.scaleY=1f;it.translationX=0f }
+            back()
+        }
+    }
     private val preferences by lazy { getSharedPreferences(if(legacyIsolation)"academic-legacy" else "academic", MODE_PRIVATE) }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if(Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) { back() }
+        onBackPressedDispatcher.addCallback(this,browserBack)
         requestId = intent.getStringExtra("requestId") ?: ""
         if(!AcademicPolicy.requestId(requestId)) { finish(); return }
         try { prepareStorage() } catch(_: Exception) {
@@ -153,7 +173,7 @@ open class AcademicActivity : Activity() {
                     return if(request.url.scheme == "https") null else WebResourceResponse("text/plain","utf-8",403,"Blocked",emptyMap(),ByteArray(0).inputStream())
                 }
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) { loading = true; pageFailure = false; generation++; capture++; recognize.isEnabled = true; address.text = if(url != null && AcademicPolicy.allowed(url)) android.net.Uri.parse(url).authority else "jwxt.gdcmxy.edu.cn:1004" }
-                override fun onPageFinished(view: WebView?, url: String?) { loading = false; if(!pageFailure) status.text = if(url?.startsWith("https://sso.gdcmxy.edu.cn/") == true) "请在学校统一身份认证页面登录，完成后返回个人学期课表。" else "请选择学期及完整周次，取消“大节次”后点击查询，再识别课表。" }
+                override fun onPageFinished(view: WebView?, url: String?) { browserBack.isEnabled=view?.canGoBack()==true; loading = false; if(!pageFailure) status.text = if(url?.startsWith("https://sso.gdcmxy.edu.cn/") == true) "请在学校统一身份认证页面登录，完成后返回个人学期课表。" else "请选择学期及完整周次，取消“大节次”后点击查询，再识别课表。" }
                 override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler, error: SslError?) { handler.cancel(); loading = false; pageFailure = true; status.text = "教务站点证书验证失败，已停止连接。请联系学校或稍后再试。" }
                 override fun onReceivedError(view: WebView?, request: WebResourceRequest, error: WebResourceError) { if(request.isForMainFrame) { loading = false; pageFailure = true; status.text = "教务页面加载失败，请检查网络后刷新；原课表保留不变。" } }
             }
@@ -259,10 +279,6 @@ open class AcademicActivity : Activity() {
         }
         complete()
     }
-    // Android 13+ 已注册 OnBackInvokedCallback；此入口仅兼容旧系统。
-    @SuppressLint("GestureBackNavigation")
-    @Deprecated("兼容 Android 8 返回")
-    override fun onBackPressed() { back() }
     override fun onDestroy() {
         leaving = true; capture++; handler.removeCallbacksAndMessages(null)
         browser?.let { web ->

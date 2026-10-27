@@ -27,6 +27,8 @@ import com.dolphin.schedule.ui.common.rememberNativePerformance
 import com.dolphin.schedule.ui.navigation.CapsuleNavigation
 import com.dolphin.schedule.ui.MainTab
 import com.dolphin.schedule.ui.navigation.rememberPageMotion
+import com.dolphin.schedule.ui.navigation.rememberPredictivePageBack
+import androidx.compose.ui.platform.testTag
 import com.dolphin.schedule.ui.notifications.NativeNotificationPermission
 import com.dolphin.schedule.ui.settings.NativeSettingsPage
 import com.dolphin.schedule.ui.settings.NativeSettingsScreen
@@ -62,7 +64,10 @@ fun DolphinApp(model: DolphinViewModel,onExit: ()->Unit,onAcademic: (Boolean)->U
             val safeInsets=dolphinInsets(preferences)
             val safeBottom=with(LocalDensity.current) { safeInsets.getBottom(this).toDp() }
             val keyboard=WindowInsets.ime.getBottom(LocalDensity.current)>0
-            BackHandler(enabled=page!=null && model.edit==null && model.detailId==null && !model.books.open && model.periodEdit==null) { model.back() }
+            val predictiveBack=rememberPredictivePageBack(
+                enabled=page!=null && model.edit==null && model.detailId==null && !model.books.open && model.periodEdit==null && !model.showGuide,
+                route=page,reduced=performance.reduced,
+            ) { model.back() }
             BackHandler(enabled=page==null && model.layout.selectedId!=null && model.edit==null && model.detailId==null && model.periodEdit==null) { model.layout.exit() }
             BackHandler(enabled=model.showGuide) { model.finishGuide() }
             val performanceObserver=if(data?.background!=null && preferences.backgroundEnabled)Modifier.observeDolphinPerformance(performance) else Modifier
@@ -86,7 +91,7 @@ fun DolphinApp(model: DolphinViewModel,onExit: ()->Unit,onAcademic: (Boolean)->U
                         is RepositoryState.Ready -> {
                             val value=current.snapshot.data
                             val welcome=!value.onboarded || model.showGuide
-                            Column(Modifier.fillMaxSize().then(pageMotion)) {
+                            Column(Modifier.fillMaxSize().then(pageMotion).then(predictiveBack).testTag("page-content")) {
                                 if(welcome)NativeWelcomeScreen(model.busy,{model.finishGuide("import")},{model.finishGuide("manual")},{model.finishGuide()})
                                 else if(page!=null) NativeSettingsPage(page,value,model,onAcademic,performance.reduced)
                                 else savedTabs.SaveableStateProvider(model.tab) { when(model.tab) {
@@ -96,7 +101,7 @@ fun DolphinApp(model: DolphinViewModel,onExit: ()->Unit,onAcademic: (Boolean)->U
                                     MainTab.SETTINGS -> NativeSettingsScreen(value,model,72.dp+safeBottom)
                                 } }
                             }
-                            if(!welcome && page==null && !keyboard && !model.books.open)CapsuleNavigation(model.tab,model::select,Modifier.align(Alignment.BottomCenter).padding(start=16.dp,end=16.dp,top=8.dp,bottom=8.dp+safeBottom).widthIn(max=320.dp).fillMaxWidth())
+                            if(!welcome && page==null && !keyboard && !model.books.open)CapsuleNavigation(model.tab,model::select,Modifier.align(Alignment.BottomCenter).padding(start=16.dp,end=16.dp,top=8.dp,bottom=8.dp+safeBottom).widthIn(max=320.dp).fillMaxWidth(),reduced=performance.reduced)
                             if(!welcome && page==null && !keyboard && model.tab in listOf(MainTab.LIST,MainTab.GRID) && value.settings.showNavigation && model.layout.selectedId==null) {
                                 val now=rememberTimetableNow()
                                 homeCourse(value.schedule,model.selectedDate,now)?.let { next ->

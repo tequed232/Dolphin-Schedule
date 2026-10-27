@@ -18,7 +18,9 @@ fun courseNotificationPresentation(
     room: String,
     bookTitle: String = ""
 ): CourseNotificationPresentation {
-    val place = room.trim().ifBlank { "教室待填写" }
+    val original=room.trim().ifBlank { "教室待填写" }
+    val numeric=Regex("^(\\d{1,3})[-—–](\\d{2,5})(?:\\s*[（(][^()（）]{1,40}[）)])?$").matchEntire(original)
+    val place=numeric?.let { "${it.groupValues[1]}栋${it.groupValues[2]}号教室" } ?: original
     val book = bookTitle.trim().takeIf { it.isNotEmpty() && it != "尚未标记" }
     return CourseNotificationPresentation(
         title = courseName.trim().ifBlank { "课程" },

@@ -4,7 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.BackHandler
+import com.dolphin.schedule.ui.navigation.rememberPredictivePageBack
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -103,8 +103,8 @@ fun NativeBookEditor(controller: BookController,settings: Preferences=Preference
     var reloadConfirm by remember { mutableStateOf(false) }
     Dialog(onDismissRequest=controller::requestClose,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false,dismissOnBackPress=false)) {
         SystemBarAppearance()
-        BackHandler { controller.requestClose() }
-        Scaffold(modifier=Modifier.fillMaxSize().imePadding(),containerColor=MaterialTheme.colorScheme.background,contentWindowInsets=insets,topBar={
+        val predictiveBack=rememberPredictivePageBack(enabled=true,route=controller) { controller.requestClose() }
+        Scaffold(modifier=Modifier.fillMaxSize().imePadding().then(predictiveBack),containerColor=MaterialTheme.colorScheme.background,contentWindowInsets=insets,topBar={
             Row(Modifier.fillMaxWidth().windowInsetsPadding(insets.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal)).padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
                 TextButton(onClick=controller::requestClose,enabled=!controller.busy) { Text("取消") }
                 Text(if(d?.original!=null)"编辑教材" else "标记教材",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
