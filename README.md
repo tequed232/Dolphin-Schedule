@@ -6,7 +6,7 @@ Dolphin Schedule 是一款 **Android 本地课表应用**，使用 **Kotlin＋Je
 
 [下载 Android 安装包](https://github.com/tequed232/Dolphin-Schedule/releases) · [导入与数据迁移](docs/data-and-migration.md) · [反馈问题](https://github.com/tequed232/Dolphin-Schedule/issues)
 
-当前源码版本为 **1.6.0**，最低支持 **Android 8.0（API 26）**。已发布版本和安装附件以 Releases 为准。
+当前源码版本为 **1.6.1**，最低支持 **Android 8.0（API 26）**。已发布版本和安装附件以 Releases 为准。
 
 ## 主要功能
 
@@ -38,10 +38,10 @@ App 默认显示主题底色，不内置背景图片。通知仅用于用户主�
 | 系统 WebView 版本 / 环境 | 内置教务导入状态 | 说明 |
 |---|---|---|
 | `154.0.8037.57` | 已确认可用 | RMX6688 真机复验通过网页加载、登录保留和课表识别预览；此前用户也确认导入正常。不代表所有厂商的同版本设备均已测试 |
-| `114.0.5.302` | 已有不可用反馈，兼容修复待验证 | 已发布版本存在兼容问题；当前源码新增旧内核隔离路径，但尚未在这个确切版本上完成登录和课表导入验收 |
+| `114.0.5.302` | 已有不可用反馈，兼容修复待验证 | v1.6.0 存在兼容问题；v1.6.1 新增旧内核隔离路径，但尚未在这个确切版本上完成登录和课表导入验收 |
 | 其他版本 | 按运行时能力判断，未逐个版本验证 | 版本号本身不能保证学校页面和登录流程可用 |
 
-当前源码优先使用 WebView 的 `MULTI_PROFILE` 能力隔离教务登录；不支持该能力时，在 **Android 9.0（API 28）及以上**使用专用进程和独立 WebView 数据目录。Android 8.x 上若缺少多 Profile 能力，则需要更新系统 WebView，或改用文件导入。这里的 Android 9.0 是兼容路径的系统要求，**不是 WebView 最低版本号**；兼容路径属于尚未发布的源码变更，不能据此认定已下载的 v1.6.0 安装包已经支持旧内核。
+v1.6.1 优先使用 WebView 的 `MULTI_PROFILE` 能力隔离教务登录；不支持该能力时，在 **Android 9.0（API 28）及以上**使用专用进程和独立 WebView 数据目录。Android 8.x 上若缺少多 Profile 能力，则需要更新系统 WebView，或改用文件导入。这里的 Android 9.0 是兼容路径的系统要求，**不是 WebView 最低版本号**。旧内核兼容路径从 v1.6.1 加入，v1.6.0 安装包不包含这项修复；`114.0.5.302` 的真实登录与导入仍待该环境验证。
 
 暂时不承诺“WebView 某一版本以上全部可用”：不同厂商提供的能力和学校页面兼容性可能不同。实现依据见 Android 官方的 [WebView 独立数据目录](https://developer.android.com/reference/android/webkit/WebView#setDataDirectorySuffix(java.lang.String)) 和 [WebKit Profile](https://developer.android.com/reference/androidx/webkit/Profile) 说明。
 

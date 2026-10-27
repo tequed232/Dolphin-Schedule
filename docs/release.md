@@ -4,7 +4,7 @@
 
 ## 版本与身份
 
-应用版本唯一来源是根 `gradle.properties` 的 `dolphinVersion`。当前源码版本为 **1.6.0**，对应 `versionCode=10600`。Gradle 编码规则为 `major × 10000 + minor × 100 + patch`，minor / patch 不超过 99；维护版本时同时更新 `RELEASE_NOTES.md` 和用户文档中的版本说明。`package.json` 仅管理工具依赖，不承载第二个应用版本。
+应用版本唯一来源是根 `gradle.properties` 的 `dolphinVersion`。当前源码版本为 **1.6.1**，对应 `versionCode=10601`。Gradle 编码规则为 `major × 10000 + minor × 100 + patch`，minor / patch 不超过 99；维护版本时同时更新 `RELEASE_NOTES.md` 和用户文档中的版本说明。`package.json` 仅管理工具依赖，不承载第二个应用版本。
 
 正式包名为 `com.dolphin.schedule`，debug 增加 `.debug`。更名前的旧包需手动迁移，同包升级必须保持发行签名并递增版本码。`release-identity.json` 记录公开包名与发行证书 SHA-256，不含私钥。
 
