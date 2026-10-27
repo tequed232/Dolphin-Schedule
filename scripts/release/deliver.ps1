@@ -2,8 +2,7 @@ param([string]$OutputRoot = '', [string]$PreviousApk = '', [string]$ApkPath = 'a
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location -LiteralPath $projectRoot
-$meta = Get-Content -Raw -Encoding UTF8 -LiteralPath 'ui/src/meta.ts'
-$version = [regex]::Match($meta, "APP_VERSION\s*=\s*'([^']+)'").Groups[1].Value
+$version = [regex]::Match((Get-Content -Raw -Encoding UTF8 -LiteralPath 'gradle.properties'), '(?m)^dolphinVersion=(\d+\.\d+\.\d+)\s*$').Groups[1].Value
 if (-not $version) { throw 'Application version was not found' }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $projectRoot 'releases' }
 $destination = Join-Path $OutputRoot "Dolphin-Schedule-$version"

@@ -1,16 +1,23 @@
 # Android 应用模块
 
-这个目录将共用界面封装为 Android App，并提供系统提醒、通知、日历和文件保存等原生能力。
+应用的正式启动入口为 `NativeActivity`。Kotlin＋Compose 负责全部应用页面，SQLite 负责本地事务保存。学校网页、Excel 解码与一次性旧数据迁移各有独立且受限的 WebView。
 
 | 路径 | 作用 |
 |---|---|
-| `build.gradle.kts` | 配置 Android 构建、包名、依赖以及界面和品牌资源生成任务 |
-| `src/main/AndroidManifest.xml` | 声明应用身份、权限和系统组件 |
-| `src/main/java/com/dolphin/schedule/` | Kotlin 宿主、内部通信、导航、提醒、日历和版本更新 |
-| `src/main/res/` | 主题、通知图标及文件共享等系统配置 |
-| `src/test/` | 原生逻辑的 JUnit 单元测试 |
-| `proguard-rules.pro` | 正式版本的代码压缩规则 |
+| `build.gradle.kts` | 包名、SDK、依赖、签名和资源生成；读取根 `dolphinVersion` |
+| `src/main/AndroidManifest.xml` | 启动入口、教务页、文件共享、通知及网络权限 |
+| `src/main/java/com/dolphin/schedule/ui/` | Compose 课表、导入、教材、设置、关于及其状态控制 |
+| `src/main/java/com/dolphin/schedule/domain/` | 课程、日期、节次、冲突、布局和导入规则 |
+| `src/main/java/com/dolphin/schedule/data/` | SQLite 事务、备份编解码、旧数据迁移及私有草稿 |
+| `src/main/java/com/dolphin/schedule/importing/` | JSON / CSV / Excel 解析、映射与预览 |
+| `src/main/java/com/dolphin/schedule/academic/` | 允许学校的浏览器、登录环境与识别控制 |
+| `src/main/java/com/dolphin/schedule/media/` | 封面与背景的本机压缩、方向校正 |
+| `src/main/assets/academic/extract.js` | 学校课表 DOM / 同源学期信息提取 |
+| `src/main/res/` | 品牌图、主题、系统图标、文件共享和备份规则 |
+| `src/test/` | Kotlin 业务与数据规则的 JVM 测试 |
+| `src/androidTest/` | Compose、事务、导入及系统交互测试 |
+| `proguard-rules.pro` | 正式构建压缩规则 |
 
-在仓库根目录执行 `npm ci` 后，Windows 可用 `npm run android` 构建并验证；其他系统按 [开发说明](../docs/development.md) 调用 Gradle Wrapper。
+根目录执行 `npm ci --ignore-scripts` 后即可用 Gradle 构建；Node 仅提供 Excel 依赖和检查工具。`app/build/generated/` 内的 Excel、许可与测试工作簿由构建生成，不提交；合成工作簿仅进入测试 APK。
 
-界面源码位于 `ui/`。Gradle 在构建时生成和同步资源，`app/build/` 不提交。各 Kotlin 文件的职责见 [文件目录指南](../docs/directory-structure.md#android-目录与关键文件)，权限用途见 [权限说明](../docs/permissions.md)。
+完整分层见 [架构说明](../docs/architecture.md)，文件放置见 [目录指南](../docs/directory-structure.md)，开发与设备验证见 [开发说明](../docs/development.md)。

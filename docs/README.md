@@ -1,18 +1,18 @@
 # 使用与维护文档
 
-这里保存当前功能和开发流程的中文说明。
-
-| 文档 | 解决什么问题 |
+| 文档 | 用途 |
 |---|---|
-| [文件目录与放置规则](directory-structure.md) | 每个目录和关键文件负责什么，新代码放在哪里 |
-| [数据与迁移](data-and-migration.md) | 如何导入导出、数据保存范围及更名后的迁移 |
-| [导航交互](navigation.md) | 日期、列表、平铺、拖动和返回如何工作 |
-| [外观与资源](appearance.md) | 主题、背景和品牌资源如何维护 |
-| [通知说明](notifications.md) | Android 提醒、行程和通知如何展示 |
-| [权限说明](permissions.md) | 哪些功能需要系统权限，何时请求 |
-| [架构说明](architecture.md) | 技术栈、模块边界和数据流 |
-| [开发说明](development.md) | 安装环境、运行、测试与提交说明约定 |
-| [发布说明](release.md) | 正式签名、APK 校验与 Pages 部署 |
-| [源码准入](source-policy.md) | 哪些文件可以提交，如何启用本地检查 |
+| [data-and-migration.md](data-and-migration.md) | 文件格式、完整备份、导入撤销和旧包迁移 |
+| [decisions-academic-import.md](decisions-academic-import.md) | 首个学校适配、登录会话、日期和识别边界 |
+| [navigation.md](navigation.md) | 日期、翻周、拖动、返回与草稿规则 |
+| [appearance.md](appearance.md) | 主题、背景、胶囊、午休和当前时间线 |
+| [notifications.md](notifications.md) | 主动导航后的行程及灵动岛展示边界 |
+| [permissions.md](permissions.md) | 权限用途与触发方式 |
+| [directory-structure.md](directory-structure.md) | 目录树、关键文件职责与新内容放置规则 |
+| [architecture.md](architecture.md) | 原生分层、保存事务和受限 WebView |
+| [development.md](development.md) | 环境、构建、验证和中文提交约定 |
+| [release.md](release.md) | 版本、签名、交付与 GitHub Release |
+| [source-policy.md](source-policy.md) | 可提交文件、生成产物和 Git 检查 |
+| [native-rebuild.md](native-rebuild.md) | 1.6.0 功能范围及验收要求 |
 
-产品概览见根目录 [README](../README.md)，版本变化见 [版本记录](../RELEASE_NOTES.md)。功能、路径和命令变化时同步更新对应文档，临时验证材料放入忽略的 `build/`。
+入门见仓库根 [README](../README.md)，版本变化见 [RELEASE_NOTES](../RELEASE_NOTES.md)。文档描述当前原生源码；具体发布状态以 GitHub Releases 为准。

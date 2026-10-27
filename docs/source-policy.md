@@ -1,22 +1,22 @@
 # 源码准入与目录规范
 
-根目录 `source-policy.json` 是源码目录、文件类型和必需文件的允许列表。目录迁移时同时修改准入规则、构建入口、导入路径、文档链接与 CI。应用源码在 `app/` 和 `ui/`，测试在 `tests/`，维护工具在 `scripts/`，长期说明在 `docs/`。
-
-各目录和关键文件的具体用途、生成输出及新增内容的放置位置见 [文件目录指南](directory-structure.md)。
+根目录 `source-policy.json` 定义允许提交的路径、文件类型、资源以及必需文件。应用在 `app/`，长期说明在 `docs/`，维护工具在 `scripts/`，工程约束在 `tests/`。完整目录职责见 [文件目录指南](directory-structure.md)。
 
 ## 文件放在哪里
 
 | 内容 | 位置与规则 |
 |---|---|
-| 运行时代码和必要资源 | `app/`、`ui/`，资源替换时同步哈希清单 |
-| 测试代码与合成数据 | `tests/`，运行时不引用测试夹具 |
+| Kotlin、Android 配置和必要资源 | `app/src/main/`；新增二进制资源需明确用途并同步准入 |
+| Kotlin 单元与设备测试 | `app/src/test/`、`app/src/androidTest/` |
+| 工程约束与检查器合成样本 | `tests/integrity/`、`tests/fixtures/` |
 | 构建、验证和交付工具 | `scripts/`，按职责分目录 |
-| 长期说明与依赖许可 | `README.md`、`docs/`、`legal/`、第三方说明 |
-| APK、编译资源和网页产物 | `app/build/`、`ui/dist/`、`releases/`，Git 忽略 |
-| 截图、日志、临时报告和工具链 | 根 `build/`，Git 忽略 |
-| SDK 路径、IDE 私有配置与签名材料 | 本机配置及忽略目录，不提交 |
+| 长期说明与许可 | 根 README、`docs/`、`legal/` 和第三方说明 |
+| APK、生成资源与报告 | `app/build/`、根 `build/`、`releases/`，Git 忽略 |
+| SDK、IDE 和签名配置 | 本机配置及忽略目录，不提交 |
 
-归档、node_modules、缓存、私有数据库、备份和一次性验收材料不进入 Git。网页由 Pages 工作流直接构建 `ui/`，不另存网页源码副本或打包发布 ZIP。新增长期文档需同步 `source-policy.json`；不要为了提交临时文件扩大允许范围。
+压缩归档、`node_modules/`、缓存、私有数据库、备份和一次性验收截图不进入 Git。旧 `ui/`、网页构建与 Pages/PWA 发布已移除；不要另存旧网页副本或将编译产物当作源码提交。学校提取脚本是明确允许的应用资源，不开放任意第三方插件脚本加载。
+
+目录迁移时同步准入规则、构建输入、引用路径、文档链接与 CI；新增长期文档需同步政策。不要为提交临时文件扩大整个资源目录的允许范围。
 
 ## 检查与钩子
 
@@ -26,12 +26,13 @@ npm run check:source-files
 node scripts/check/check-source-files.mjs --staged
 node scripts/check/check-source-files.mjs --self-test
 node scripts/check/check-source-push.mjs --self-test
+npm run check
 ```
 
-钩子安装是显式操作，不由 npm ci 修改用户已有钩子。pre-commit 检查实际 Git 暂存内容，pre-push 检查推送提交与新增历史，GitHub Actions 执行独立源码准入。根 build/ 和 app/build/ 属于输出；scripts/build/ 属于构建源码工具，两者按路径区分。
+钩子是显式安装的，不由 `npm ci` 修改用户已有钩子。`pre-commit` 检查实际暂存内容，`pre-push` 检查推送提交与新增历史，GitHub Actions 独立执行源码准入。根 `build/` 和 `app/build/` 是输出；`scripts/build/` 是构建工具源码，两者按完整路径区分。
 
-手动触发源码准入时，以实时默认分支的共同祖先为历史基线，并严格检查当前源码；基线之后新增的违规历史仍会被拒绝。重写提交历史后，旧推送事件可能引用已经退出分支的提交编号，应对新历史重新触发手动验证。
+手动触发源码准入时，以实时默认分支的共同祖先为历史基线，并严格检查当前源码；基线后新增的违规历史仍会被拒绝。重写历史后，旧推送事件可能引用已退出分支的编号，应对新历史重新触发验证。
 
-路径和 Markdown 链接应与 Git 中的大小写完全一致，避免 Windows 正常而 GitHub/Linux 失效。文件移动后同时更新引用，替换旧文件时从 Git 移除原件，避免保留重复资源。
+检查器自测使用 `tests/fixtures/source-policy.json` 中的合成政策，其中历史路径只是测试输入，不代表当前仓库仍接受这些路径。工程检查验证原生启动、版本、权限、必要资源和退役文件等不变量，不能替代业务单元测试与设备测试。
 
-规则引擎自测使用 `tests/fixtures/source-policy.json` 中的合成政策，它不能替代实际仓库的准入规则。完整目录边界见 [架构说明](architecture.md)，验证步骤见 [开发说明](development.md)。
+路径和 Markdown 链接的大小写必须与 Git 完全一致，避免 Windows 可用而 GitHub/Linux 失效。移动文件后更新所有引用，删除原件，减少重复资源。

@@ -1,37 +1,17 @@
 {
-  "name": "dolphin-schedule",
-  "description": "面向校园日常的本地课表应用，共用 React 界面支持 Android 与浏览器访问。",
-  "version": "1.5.5",
+  "name": "dolphin-schedule-tools",
+  "description": "Dolphin Schedule 原生 Android 项目的源码检查与本地 Excel 解码依赖",
   "private": true,
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "vite --config ui/vite.config.ts --host 127.0.0.1 --port 5173 --strictPort",
-    "build": "tsc --noEmit -p ui/tsconfig.json && vite build --config ui/vite.config.ts",
-    "preview": "vite preview --config ui/vite.config.ts --host 127.0.0.1 --port 4173 --strictPort",
     "check": "node scripts/check/verify.mjs",
     "check:source-files": "node scripts/check/check-source-files.mjs",
     "hooks:install": "git config --local core.hooksPath .githooks",
-    "test": "node --import tsx --test tests/unit/*.test.ts",
-    "check:ui": "node scripts/check/ci.mjs",
-    "check:pages": "node tests/browser/check-pages.mjs",
     "android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/android.ps1",
     "deliver": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/deliver.ps1"
   },
   "dependencies": {
-    "@e965/xlsx": "0.20.3",
-    "react": "19.1.1",
-    "react-dom": "19.1.1"
-  },
-  "devDependencies": {
-    "@material-symbols/svg-400": "0.47.5",
-    "@types/react": "19.1.13",
-    "@types/react-dom": "19.1.9",
-    "@vitejs/plugin-react": "5.0.3",
-    "playwright": "1.55.1",
-    "rollup": "4.63.5",
-    "tsx": "4.20.5",
-    "typescript": "5.9.2",
-    "vite": "7.3.7"
+    "@e965/xlsx": "0.20.3"
   }
 }

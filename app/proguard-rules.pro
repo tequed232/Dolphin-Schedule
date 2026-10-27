@@ -1,2 +1,1 @@
--keepclassmembers class com.dolphin.schedule.MainActivity$Bridge { @android.webkit.JavascriptInterface <methods>; }
--keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+# 数据模型使用显式 JSON 编解码；无需为旧网页通信桥保留类或方法。

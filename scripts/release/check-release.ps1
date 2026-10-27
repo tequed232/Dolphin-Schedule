@@ -23,7 +23,7 @@ function Read-ApkIdentity([string]$path) {
 }
 $current = Read-ApkIdentity $ApkPath
 if ($current.applicationId -ne $identity.applicationId -or $current.signerSha256 -ne $identity.signerSha256) { throw 'APK package or signer does not match the pinned release identity' }
-$version = [regex]::Match((Get-Content -Raw -Encoding UTF8 -LiteralPath 'ui\src\meta.ts'), "APP_VERSION\s*=\s*'([^']+)'").Groups[1].Value
+$version = [regex]::Match((Get-Content -Raw -Encoding UTF8 -LiteralPath 'gradle.properties'), '(?m)^dolphinVersion=(\d+\.\d+\.\d+)\s*$').Groups[1].Value
 $parts = $version.Split('.') | ForEach-Object { [int]$_ }
 if ($parts.Count -ne 3 -or $parts[1] -gt 99 -or $parts[2] -gt 99) { throw 'Version exceeds the supported versionCode range' }
 $expectedCode = $parts[0]*10000 + $parts[1]*100 + $parts[2]

@@ -23,8 +23,5 @@ jobs:
         with:
           gradle-version: '8.13'
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - run: npm ci && npm run build && npm run check && npm test
-      - run: npm run check:ui -- --fail-fast
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
-      - run: bash ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
+      - run: npm ci --ignore-scripts && npm run check
+      - run: bash ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --console=plain

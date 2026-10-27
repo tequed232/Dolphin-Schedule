@@ -1,86 +1,64 @@
-# 架构与目录职责
+# 原生架构
 
-Dolphin Schedule 采用单 Android 模块与一套共用 React 界面。Android App 是主要产品，同时通过 GitHub Pages 提供浏览器访问；网页与 APK 共用源码，不维护额外的网页代码副本，不提供 PWA、Service Worker 或双击离线 HTML。
+Dolphin Schedule 的界面与关键业务由 Kotlin＋Jetpack Compose 实现。`NativeActivity` 是正式启动入口；应用不加载旧业务网页，不包含独立 Web 产品或网页发布流程。
 
-## 技术栈
+## 分层与数据流
 
-| 层级 | 技术 | 职责 |
-|---|---|---|
-| 界面 | React / React DOM 19.1.1、TypeScript 5.9.2、CSS | 页面、组件、主题和交互 |
-| 界面构建 | Vite 7、npm、Node.js 24 | 本地开发、类型检查、资源打包 |
-| Android 宿主 | Kotlin 2.0.21、AndroidX WebKit 1.12.1、Core 1.15.0 | WebView、安全资源加载、原生能力 |
-| Excel 解析 | @e965/xlsx 0.20.3 | 延迟加载的 XLS / XLSX 文件导入 |
-| 本地持久化 | IndexedDB、SharedPreferences | 业务数据、提醒调度镜像与更新状态 |
-| Android 构建 | Gradle 8.13、AGP 8.13.0、JDK / JVM target 17 | APK、资源处理、lint |
-| 平台范围 | minSdk 26、compileSdk / targetSdk 36 | Android 8.0 起 |
-| 测试 | Node test runner、tsx、Playwright、JUnit 4、Android lint | 逻辑、界面和宿主验证 |
-
-精确 npm 版本以 `package.json` 和 `package-lock.json` 为准；Android 版本以 Gradle 配置为准。`md-card`、`md-dialog` 是项目自定义 Web 元素，界面不使用 Compose。
-
-## 目录
-
-下面按层说明职责边界。完整目录树、根配置文件、原生/界面关键文件、脚本入口与生成目录详见 **[文件目录与放置规则](directory-structure.md)**。
-
-| 路径 | 用途与边界 |
-|---|---|
-| `app/src/main/java/com/dolphin/schedule/` | Kotlin 宿主及系统能力、更新检查和原生导航，不复制 React 的课程编辑业务逻辑 |
-| `MainActivity.kt` | WebView 初始化、原生通信、返回手势、权限与系统选择器 |
-| `ReminderScheduler.kt` | 原生课表镜像、课次计算、AlarmManager，以及打开应用、应用更新或时间变化后的调度恢复 |
-| `Notifications.kt`、`LiveNotificationSupport.kt` | 课前提醒、持续行程和实时通知能力检查 |
-| `CalendarSync.kt`、`SystemHolidays.kt` | 应用自己的课程日历写入/复原、选择来源后的节假日读取 |
-| `app/src/main/res/` | Android 主题、单色通知图标、通知彩图与 XML 资源 |
-| `ui/src/screens/` | 主页、搜索、导入、设置、系统日历等页面 |
-| `ui/src/components/` | 月历、列表/平铺课表、课程编辑器、弹层、引导和实体导航等共享组件 |
-| `ui/src/lib/` | 模型、JSON/CSV/Excel 导入、存储、图片处理和 Android 通信入口 |
-| `ui/src/state/` | 应用状态、原子事务、多窗口同步、编辑冲突检查和异步读取 |
-| `ui/src/nav/` | 页面切换、返回与手势状态 |
-| `ui/src/theme/` | 设计令牌、页面样式、外观和安全区处理 |
-| `ui/src/assets/` | 本地图标、统一品牌图；清单记录资源哈希 |
-| `tests/unit/` | 数据解析、课次计算等逻辑测试 |
-| `tests/browser/` | 核心流程、布局、外观和持久化回归 |
-| `tests/android/` | 指定模拟器上的原生交互检查，不是应用运行时代码 |
-| `tests/helpers/`、`tests/fixtures/` | 测试浏览器工具与合成数据；不进入 APK |
-| `tests/integrity/` | 工程约束、图标与图片完整性检查 |
-| `scripts/build/` | Android 构建辅助入口 |
-| `scripts/check/` | 基础检查与浏览器测试编排 |
-| `scripts/dev/` | 本地图标子集生成工具 |
-| `scripts/release/` | 正式 APK 身份校验与交付 |
-| `docs/`、`legal/` | 当前维护说明、第三方许可证 |
-| `.github/workflows/` | `verify.yml` 验证应用，`source-admission.yml` 检查源码准入，`pages.yml` 构建并部署网页 |
-
-## 数据与原生通信
-
-```mermaid
-flowchart TD
-    UI[ui/src：React 页面与交互] --> State[state + lib：校验和事务]
-    State --> DB[(IndexedDB：本地课表)]
-    State --> Bridge[内部 Android 通信]
-    Bridge --> Native[app/src：Kotlin 宿主]
-    Native --> System[提醒 / 系统日历 / 文件选择]
-    UI --> Vite[Vite 打包]
-    Vite --> Generated[app/build/generated：生成资源]
-    Generated --> APK[Android APK]
-    Vite --> Pages[GitHub Pages 静态部署]
-    Tests[tests：逻辑 / 浏览器 / Android] -.验证.-> UI
-    Tests -.验证.-> Native
+```text
+用户操作
+  → Compose 页面与 DolphinViewModel / 各功能 Controller
+  → domain 业务规则、导入解析与校验
+  → NativeRepository 的 SQLite 事务
+  → StateFlow 发布已提交快照
+  → Compose 重新显示；同步当前导航行程所需的小型镜像
 ```
 
-React 发起修改 → 验证输入 → IndexedDB 事务提交成功 → 更新 React 状态 → 将提醒所需数据镜像到 Android SharedPreferences。后台提醒由原生闹钟与广播接收器驱动，不依赖 WebView 持续运行。
+| 层 | 主要位置 | 职责 |
+|---|---|---|
+| 页面 | `app/src/main/java/com/dolphin/schedule/ui/` | 原生绘制、触摸、无障碍、输入和系统结果入口 |
+| 状态 | `DolphinViewModel` 及功能 Controller | 页面路由、选中日期、草稿、异步任务、错误和确认状态 |
+| 业务 | `domain/` | 课程、周次、布局、冲突、节次、教材关联及纯转换规则 |
+| 持久化 | `data/` | SQLite、编码、事务、迁移及应用私有草稿文件 |
+| 文件导入 | `importing/` | JSON / CSV / Excel 单元格处理、工作表、映射和预览 |
+| 教务 | `academic/` 与 `assets/academic/extract.js` | 学校访问限制、用户登录、页面识别与结果回传 |
+| 系统能力 | Kotlin 根包与 `media/` | 主动导航、行程通知、文件共享、图片处理 |
 
-`window.Dolphin.postMessage()` 是内部 Android 通信入口，`window.dolphinNative` 返回结果。它提供提醒、系统日历、主题、导航等必要能力，不提供第三方插件注册、动态插件加载或扩展市场。
+## 一份已提交数据
 
-界面通过 WebViewAssetLoader 从 `https://appassets.androidplatform.net/assets/ui/index.html` 加载。资源随 APK 内置；外部导航由用户操作触发。调试 WebView 仅在 debug 包开启。
+`NativeRepository` 将 `AppData` 编码为有版本号的 SQLite 快照，数据库为 `dolphin-native.db`，通过 WAL 和事务提交。课程、教材、偏好、自选背景及最近一次教务撤销快照属于同一应用数据模型。
 
-## 构建输出与维护约定
+更新先读取当前快照，检查业务条件，再编码并提交。事务成功后才发布界面状态；失败保留当前数据。完全相同的更新不增加版本。需要防止旧内容覆盖时，使用课表基线或课程/教材等目标的预期值检查，不能只靠页面打开时的快照保存。
 
-`npm run build` 输出 `ui/dist/`。Gradle `syncUi` 将其复制到 `app/build/generated/assets/ui/`，`syncBrand` 从统一品牌源文件生成 `app/build/generated/res/brand/drawable-nodpi/app_icon.webp`。源码树中不保存生成的 Android assets 或重复启动器图标。
+导航行程使用 SharedPreferences 小型镜像，包含所需的设置、教材名称和导航目标。它不是第二份课程数据库，也不承担课前提醒。通知副作用失败应与课程保存结果区分。
 
-Pages 工作流从 GitHub 读取部署子路径，通过 `DOLPHIN_BASE_PATH` 构建同一个 `ui/dist/`。Android 构建固定使用相对资源路径 `./`，避免网页部署路径进入 APK。网页保留课程浏览、编辑、搜索和文件导入；原生提醒、系统日历及 Android 安装更新依赖宿主。
+## 三种受限 WebView
 
-`ui/src/meta.ts` 提供应用名和版本；npm 版本保持一致，Gradle 从该文件读取版本并生成 versionCode。正式包身份为 `com.dolphin.schedule`，调试包增加 `.debug`，IndexedDB 名为 `dolphin-schedule`。Android、debug 包和浏览器不共享私有数据，迁移范围见 [数据说明](data-and-migration.md)。
+| 用途 | 读取内容 | 边界 |
+|---|---|---|
+| 学校教务 | 用户允许学校的 HTTPS 页面 | 独立教务 Profile；用户自己登录；只提取课表与同源学期信息，外部页面没有应用业务能力桥 |
+| Excel 解码 | 构建内置的 SheetJS 与所选文件字节 | 无界面、本地来源、禁止网络和外部文件访问；只返回单元格，课程规则和保存仍由 Kotlin 处理 |
+| 首次升级迁移 | 旧本地来源的 IndexedDB `dolphin-schedule` | 仅 SQLite 尚无数据时读取；返回本地状态后销毁；不加载旧业务 HTML，不请求网络，不删除旧库 |
 
-用户数据与运行时功能不放入测试目录；应用运行时不导入测试夹具。保存失败不得发布成功状态，取消和返回必须保护未保存草稿；系统日历操作只管理本 App 自己的课程日历。
+Android 系统 WebView 是这些能力的运行环境，不是 Compose 的页面渲染器。教务隔离配置不可用时应明确报错并保留课表；更新系统 WebView 后再重试。不能通过降低学校访问或证书限制来绕开错误。
 
-当前无默认背景图片，自定义背景关闭时直接显示主题底色。项目只维护应用自身功能，不提供第三方插件运行时、注册接口或扩展市场。
+## 导入与草稿
 
-环境和验证入口见 [开发说明](development.md)，允许提交的文件与历史准入规则见 [源码准入](source-policy.md)。一次性构建体积、截图和验收记录保存在忽略的输出目录，不作为长期架构说明的一部分。
+文件和教务导入都经过“读取 → 转换校验 → 日期/作息核对 → 差异预览 → 用户确认 → 事务提交”。空课表、损坏或超限数据不能静默替换当前课表。文件导入的错误明细需要用户核对；手动映射和工作表选择应保留到重新预览。
+
+教务导入前后课表在同一事务记录，以便撤销。草稿保存在应用私有目录，页面状态只保留标识和有界输入；恢复草稿后重新核对，不自动补交上次未确认的写入。
+
+## 导航与行程
+
+地图地址只包含学校和识别出的楼栋，完整教室号保留在 App。地图由用户点击后打开；成功打开后，根据通知设置和权限创建最长 30 分钟的行程。行程令牌隔离到达、删除和超时操作，旧操作不能结束后来启动的行程。课程或目标已变化时，撤下失效行程，不后台恢复。
+
+通知仅保留这个导航行程链路。应用不再调度课前提醒、桌宠、台词、系统日历同步或节假日查询。
+
+## 资源和构建
+
+- 唯一应用版本来自根 `gradle.properties` 的 `dolphinVersion`，由 Gradle 生成应用版本与版本码。
+- 品牌源图位于 `app/src/main/res/drawable-nodpi/app_icon.webp`，学校提取脚本位于 `app/src/main/assets/academic/extract.js`。
+- npm 仅锁定 Excel 解码器并运行维护工具。Gradle 将其复制为 `generated/assets/spreadsheet/xlsx.js`。
+- Gradle 将根 MIT、第三方说明与 Apache-2.0 正文复制到 `generated/assets/legal/`，供“关于”离线阅读。
+- 合成 Excel 工作簿只生成到测试资源；设备截图、日志、工具链和 APK 放在忽略目录。
+
+目录规则见 [目录指南](directory-structure.md)，数据范围见 [数据与迁移](data-and-migration.md)，验证入口见 [开发说明](development.md)。

@@ -1,7 +1,7 @@
 import java.util.Properties
 
-plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
-val appVersion = Regex("APP_VERSION\\s*=\\s*'([^']+)'").find(rootProject.file("ui/src/meta.ts").readText())!!.groupValues[1]
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
+val appVersion = providers.gradleProperty("dolphinVersion").get()
 val versionParts = appVersion.split('.').map(String::toInt)
 val signingFile = rootProject.file("signing.local.properties")
 val signing = Properties().apply { if(signingFile.exists()) signingFile.inputStream().use { load(it) } }
@@ -12,6 +12,7 @@ android {
         applicationId = "com.dolphin.schedule"
         minSdk = 26
         targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionName = appVersion
         versionCode = versionParts[0] * 10000 + versionParts[1] * 100 + versionParts.getOrElse(2) { 0 }
     }
@@ -29,30 +30,49 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { buildConfig = true }
+    buildFeatures { buildConfig = true; compose = true }
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/assets"))
-    sourceSets.getByName("main").res.srcDir(layout.buildDirectory.dir("generated/res/brand"))
+    sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/test-assets"))
 }
-val buildUi by tasks.registering(Exec::class) {
+val syncLegal by tasks.registering(Sync::class) {
+    from(rootProject.file("LICENSE")) { rename { "MIT.txt" } }
+    from(rootProject.file("THIRD_PARTY_NOTICES.md"))
+    from(rootProject.file("legal/APACHE-2.0.txt"))
+    into(layout.buildDirectory.dir("generated/assets/legal"))
+}
+val syncSpreadsheet by tasks.registering(Sync::class) {
+    from(rootProject.file("node_modules/@e965/xlsx/dist/xlsx.full.min.js"))
+    rename("xlsx.full.min.js", "xlsx.js")
+    into(layout.buildDirectory.dir("generated/assets/spreadsheet"))
+    doFirst { check(rootProject.file("node_modules/@e965/xlsx/dist/xlsx.full.min.js").isFile) { "Excel 解码器缺失，请先执行 npm ci" } }
+}
+tasks.named("preBuild") { dependsOn(syncLegal, syncSpreadsheet) }
+val nativeImportFixtures by tasks.registering(Exec::class) {
     workingDir(rootProject.projectDir)
-    environment("DOLPHIN_BASE_PATH", "./")
-    commandLine(if(System.getProperty("os.name").startsWith("Windows")) "npm.cmd" else "npm", "run", "build")
-    inputs.dir(rootProject.file("ui/src"))
-    inputs.files(rootProject.file("package.json"), rootProject.file("package-lock.json"), rootProject.file("ui/index.html"), rootProject.file("ui/vite.config.ts"), rootProject.file("ui/tsconfig.json"))
-    outputs.dir(rootProject.file("ui/dist"))
+    commandLine("node", "scripts/build/native-import-fixtures.mjs", layout.buildDirectory.dir("generated/test-assets/file-import").get().asFile.absolutePath)
+    inputs.file(rootProject.file("scripts/build/native-import-fixtures.mjs"))
+    outputs.dir(layout.buildDirectory.dir("generated/test-assets/file-import"))
 }
-val syncUi by tasks.registering(Sync::class) {
-    dependsOn(buildUi)
-    from(rootProject.file("ui/dist"))
-    into(layout.buildDirectory.dir("generated/assets/ui"))
-}
-val syncBrand by tasks.registering(Sync::class) {
-    from(rootProject.file("ui/src/assets/brand/app-icon.webp"))
-    rename("app-icon.webp", "app_icon.webp")
-    into(layout.buildDirectory.dir("generated/res/brand/drawable-nodpi"))
-}
-tasks.named("preBuild") { dependsOn(syncUi, syncBrand) }
+tasks.matching { it.name == "mergeDebugAndroidTestAssets" || it.name == "generateDebugAndroidTestLintModel" || it.name == "lintAnalyzeDebugAndroidTest" }.configureEach { dependsOn(nativeImportFixtures) }
 tasks.matching { it.name == "validateSigningRelease" }.configureEach {
     doFirst { check(signingFile.exists()) { "正式包需要发行签名，请配置 signing.local.properties 和发行密钥。" } }
 }
-dependencies { implementation("androidx.webkit:webkit:1.12.1"); implementation("androidx.core:core-ktx:1.15.0"); testImplementation("junit:junit:4.13.2") }
+dependencies {
+    implementation("androidx.webkit:webkit:1.12.1")
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.exifinterface:exifinterface:1.4.2")
+    implementation(platform("androidx.compose:compose-bom:2025.04.01"))
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.04.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+}

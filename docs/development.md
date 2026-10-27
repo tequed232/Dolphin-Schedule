@@ -1,108 +1,114 @@
 # 开发与验证
 
-开始修改前可先查阅 [文件目录与放置规则](directory-structure.md)，定位功能入口，区分源码、测试夹具和生成输出。
+界面、状态和业务以 Kotlin＋Jetpack Compose 为主。先查阅 [目录指南](directory-structure.md) 和 [架构](architecture.md)，确认修改应放在页面、业务、持久化还是受限 WebView 中。
 
 ## 环境
 
-- Node.js 24 与 npm，使用 `npm ci` 安装锁定依赖。
-- JDK 17，设置 `JAVA_HOME`；Gradle Wrapper 固定为 8.13。
-- Android SDK Platform 36、Build Tools 36.0.0；设备检查另需 Platform Tools / adb。
-- 浏览器测试使用本机 Chrome / Edge 或 Playwright Chromium，可用 `CHROME_PATH` 指定可执行文件。
+- Node.js 24 与 npm：安装锁定的本地 Excel 解码器、运行源码检查和生成合成工作簿。
+- JDK 17，设置 `JAVA_HOME`；Gradle Wrapper 固定 8.13。
+- Android SDK Platform 36、Build Tools 36.0.0；设备测试另需 Platform Tools / adb 及隔离模拟器。
+- 最低 Android 8.0（API 26），目标与编译 SDK 为 36。
 
-先执行 `npm ci`。如果没有可用的本机浏览器，可执行 `npx playwright install chromium` 安装测试浏览器；Linux CI 的系统依赖由 Pages 工作流中的 `--with-deps` 一并安装。
-
-项目根目录创建未跟踪的 `local.properties`：
+在根目录配置被忽略的 `local.properties`：
 
 ```properties
 sdk.dir=C\:/Users/你的用户名/AppData/Local/Android/Sdk
 ```
 
-也可通过 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 配置 SDK。个人 IDE 配置、SDK 路径、签名文件和构建产物不进入版本控制。
+也可通过 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 配置 SDK。SDK、IDE 私有配置、签名与工具链不提交。旧 React/Vite/TypeScript 和浏览器测试依赖已删除，无需启动网页开发服务器。
 
-## 常用命令
+## 构建与本地检查
 
-所有命令从仓库根目录执行。
+所有命令从仓库根目录执行：
 
-| 命令 | 作用 |
-|---|---|
-| `npm ci` | 安装锁定依赖 |
-| `npm run dev` | 启动界面开发服务器，端口 5173 |
-| `npm run build` | TypeScript 检查与共用界面构建，输出 ui/dist/ |
-| `npm run preview` | 本地预览构建产物，端口 4173，仅供开发 |
-| `npm run check` | 工程约束与资源完整性检查 |
-| `npm test` | 单元测试 |
-| `npm run check:ui` | 自动启动独立服务器并运行浏览器回归，结束后关闭服务器 |
-| `npm run check:pages` | 验证构建后网页的部署路径、导入与刷新持久化 |
-| `npm run android` | Windows：通过 Wrapper 构建 debug APK、运行原生单元测试和 lint |
-| `npm run deliver` | Windows：校验并交付已有签名 release APK |
+```sh
+npm ci --ignore-scripts
+npm run check
+```
 
-完整浏览器回归使用端口 5183，自动启动和关闭测试服务器。单独运行使用开发服务器的测试脚本时，先启动 `npm run dev`，可用 `TEST_URL` 指定地址；`check-pages.mjs` 和 `check-import-loading.mjs` 则自行提供构建产物的静态服务器。浏览器不具备 Android 后台通知或系统日历能力，相关回调在测试中模拟。回归运行期间保持源码和 Vite 配置不变，避免热更新或服务重启干扰状态与布局断言。
-
-可用 `npm run check:ui -- --only=check-ui.mjs,check-background.mjs` 只重跑指定测试组，`--fail-fast` 在首个失败组后停止。完整与指定组的结果分别写入 `build/evidence/browser-ci-results.json` 和 `browser-ci-rerun-results.json`。
-
-## 验证 GitHub Pages
-
-先按目标部署路径构建，再用相同环境验证。Windows PowerShell：
+Windows：
 
 ```powershell
-$env:DOLPHIN_BASE_PATH = '/Dolphin-Schedule/'
-npm run build
-npm run check:pages
-Remove-Item Env:DOLPHIN_BASE_PATH
+.\gradlew.bat :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --console=plain
 ```
 
 macOS / Linux：
 
 ```sh
-DOLPHIN_BASE_PATH=/Dolphin-Schedule/ npm run build
-DOLPHIN_BASE_PATH=/Dolphin-Schedule/ npm run check:pages
+bash ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --console=plain
 ```
 
-域名根路径改为 `/`。检查覆盖子路径静态资源、延迟导入、课表持久化、新名称、版本和无内置背景状态。自动部署从 GitHub 配置读取实际路径，见 [发布说明](release.md)。Android 构建由 Gradle 固定为相对路径 `./`。
+`npm run android` 是 Windows 的 debug 构建、JVM 测试与 lint 入口。`npm run check` 检查当前源码及工具自测，不运行 Gradle 或设备测试；它不能代替业务回归。`npm run deliver` 只校验并整理已有正式签名包。
 
-## Android
+Gradle 在构建时同步 Excel 解码器和离线许可；品牌图直接来自 Android 资源。合成 XLS/XLSX 只生成到测试资源，不进入主 APK。
+
+| 输出 | 路径 |
+|---|---|
+| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` |
+| 测试 APK | `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk` |
+| JVM 报告 | `app/build/reports/tests/testDebugUnitTest/` |
+| lint 与其他 Android 报告 | `app/build/reports/` |
+| 本机截图、日志与验证记录 | 根 `build/evidence/` |
+
+## 隔离模拟器回归
+
+会写入合成课表的测试只能在明确指定的隔离模拟器运行，必须传 `allowNativeDataTests=true`；代码还会检查模拟器身份。不要将整个 instrumentation 包直接用于私人手机。测试保存并恢复模拟器原生快照，但不应因此把真实用户设备当作隔离环境。
+
+以下以 `emulator-5562` 为例；先通过 `adb devices -l` 核对当前序列号，再安装主包和测试包：
 
 ```powershell
-.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
+adb -s emulator-5562 install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5562 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s emulator-5562 shell am instrument -w -e allowNativeDataTests true -e class com.dolphin.schedule.ui.CapsuleNavigationTest,com.dolphin.schedule.ui.NativeFlowTest,com.dolphin.schedule.ui.NativeAcademicImportTest,com.dolphin.schedule.ui.NativeFileImportTest,com.dolphin.schedule.ui.NativeHomeStyleTest,com.dolphin.schedule.ui.NativeBooksTest,com.dolphin.schedule.ui.NativeAppearanceTest,com.dolphin.schedule.ui.NativeTimetableTest,com.dolphin.schedule.ui.NativeLayoutTest,com.dolphin.schedule.ui.NativeJourneyTest,com.dolphin.schedule.ui.SupportScreensTest,com.dolphin.schedule.ui.NativeSupportFlowTest,com.dolphin.schedule.data.RepositoryTransactionTest com.dolphin.schedule.debug.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-macOS / Linux 使用 `bash ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain`。Gradle 自动执行界面构建、资源同步与启动器品牌资源生成。需要先完成 `npm ci`。
+| 测试组 | 验证范围 |
+|---|---|
+| 胶囊与流程 | 选中项、至少 48dp 触摸区域、快速切换、编辑和页面重建 |
+| 平铺布局 | 普通横滑、边缘翻周、反向与取消、长按移动、上下把手、冲突和旧手势保护 |
+| 作息与主页 | 午休收起、当前时间线、空闲节次删除和实际时间保留 |
+| 教务导入 | 合成学校结果、日期优先、动态节次、草稿、预览、替换、撤销和教材保留 |
+| 文件导入 | 内容 URI、多工作表、映射、错误行、仅时间更新、草稿和确认保护 |
+| 教材与外观 | 字段编辑、系统选图、相机约定、EXIF、私有草稿、背景压缩和取消保护 |
+| 导航行程 | 权限与地图结果、结束、期限、旧操作令牌和已删除功能清理 |
+| 更新与关于 | 正式版本内容、离线许可、精简引导和失败重试 |
+| 数据事务 | SQLite 回滚、并发、原文迁移备份和过期预览保护 |
 
-- Debug APK：`app/build/outputs/apk/debug/app-debug.apk`
-- Lint：`app/build/reports/`
-- 浏览器/工程证据：`build/evidence/`
-- 模拟器数据恢复备份：`build/device-backups/`
+测试工作簿由 `scripts/build/native-import-fixtures.mjs` 生成，图片在测试时生成。系统选图测试只向隔离模拟器写入临时图片，结束后清理自身记录。学校测试使用合成结果，不代表真实学校网络、验证码和会话已经验证；组件更新测试也不代表 GitHub 当时可用。结果必须以本次实际执行日志为准，不沿用历史通过数。
 
-`tests/android/` 保存需要显式指定设备的原生导航、通知、系统日历和更新检查；运行前阅读各脚本的设备与数据前置条件。仅在隔离测试设备上运行，浏览器回调模拟不代替实机验证。
+文件导入限制为源文件 5 MB，每表 3000 行/100 列；Excel 另限制解压总量 64 MB、总单元格 30 万。业务限制和错误保护应结合 JVM 测试验证，不能只凭界面显示成功判断数据完整。
 
-## 持续集成
+## 独立真机验收包
 
-`.github/workflows/verify.yml` 安装 Node 24、JDK 17 和 Android SDK，依次运行界面构建、工程检查、单元测试、浏览器回归、debug APK 构建与 Android lint。工作流不需要发行私钥，也不发布正式 APK。
+为保留日用包和既有数据，可生成独立包：
 
-## 资源维护
+```powershell
+node scripts/build/device-preview.mjs
+.\gradlew.bat -I build/device-preview/init.gradle :app:assembleDebug :app:assembleDebugAndroidTest --console=plain
+```
 
-品牌资源使用无损 WebP，尺寸、透明度和像素保持原 PNG 一致。替换资源后更新 `ui/src/assets/manifest.json` 中的尺寸、大小和 SHA-256，并运行 `npm run check` 与外观回归。启动器图标由 Gradle 自动复制统一源文件。
+此构建应用 ID 为 `com.dolphin.schedule.devicepreview.debug`，名称为“Dolphin Schedule 原生验收”。脚本只生成被忽略的临时 Gradle/标签覆盖配置，正式入口本身已是 `NativeActivity`。构建仍写入标准 APK 路径，安装或交付前必须核对包名；恢复普通构建时去掉 `-I` 后重新构建。
 
-`scripts/dev/vendor-icons.cjs` 可从锁定的 Material Symbols 包重新生成图标子集；图标清单与许可证随源码保存。不要引入网络字体作为离线 App 的必需依赖。
+`DevicePreviewTest` 仅接受此独立包及 `allowDevicePreview=true`，不填合成课表、不自动确认教务导入或删除课程。它检查已有数据编码往返、导航、取消选图/时间编辑、长按后退出和可用时的时间线，并记录胶囊切换的 `FrameMetrics`。
 
-源码准入工具位于 `scripts/check/`，安装和规则说明见 [源码准入](source-policy.md)。测试输出、截图、体积比较和构建来源记录应写入忽略的 `build/evidence/`；这些文件由实际执行的验证任务生成，不随源码提交。
+```powershell
+adb -s <真机序列号> install -r <已核对包名的验收APK>
+adb -s <真机序列号> install -r <验收测试APK>
+adb -s <真机序列号> shell am instrument -w -e allowDevicePreview true -e class com.dolphin.schedule.ui.DevicePreviewTest com.dolphin.schedule.devicepreview.debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+不要为解决签名不同而卸载用户安装包或清除数据。独立包与日用包数据不自动同步；教务会话也不从桌面浏览器或其他包复制。设备需要解锁并允许安装时由用户处理系统提示。Android 17 的验收路径使用公开系统触摸注入，避免依赖旧输入隐藏 API。
+
+真机帧耗时只适合前后对比，调试包和单台设备不能证明所有手机帧率。系统灵动岛、相机和真实学校登录应独立记录设备结果。私人课表、封面、截图、数据库和登录信息不得随源码上传。
+
+## 持续集成和资源
+
+`verify.yml` 安装 Node 24、JDK 17 和 SDK，运行 npm 工程检查、debug 主包/测试包构建、JUnit 和 lint。它不自动启动设备测试、不使用发行私钥、不发布 APK 或 Pages。源码与新增历史由独立 `source-admission.yml` 检查。
+
+品牌图位于 `app/src/main/res/drawable-nodpi/app_icon.webp`，通知图与 XML 位于同级资源目录。替换必要资源时同步准入与第三方说明；不要提交设备截图、测试图或第二份品牌副本。
 
 ## 中文提交说明
 
-GitHub 文件列表中间一列显示最近一次修改该文件或目录的提交标题。标题应面向中文读者，说明这次变更做了什么；具体用途、入口和维护方法放在目录 README 与 [文件目录指南](directory-structure.md) 中。后续修改会自动替换这一列的显示内容，因此每次提交都应写清意图。
+GitHub 文件列表中间一列来自最近一次修改该文件或目录的提交标题。采用 `类型(范围): 中文说明`，范围可省略；保留 `feat`、`fix`、`docs`、`refactor`、`build`、`test`、`ci`、`chore`、`release` 等类型与路径名称，冒号后用中文解释变更目的。
 
-采用 `类型(范围): 中文说明`，范围可以省略。保留通用英文类型、路径、命令和技术名称，正文使用中文。
-
-| 类型 | 用途 | 示例 |
-|---|---|---|
-| `feat` | 增加面向用户的功能 | `feat(ui): 支持按教材名称搜索课程` |
-| `fix` | 修复错误或异常行为 | `fix(import): 避免空文件覆盖现有课表` |
-| `docs` | 更新说明、目录用途和使用方法 | `docs(app): 说明 Android 宿主、提醒与日历能力` |
-| `refactor` | 调整代码结构和职责 | `refactor(state): 集中维护课表保存与同步逻辑` |
-| `build` | 调整构建工具、依赖或打包配置 | `build(gradle): 说明插件版本与统一依赖仓库` |
-| `test` | 新增或修正测试 | `test(browser): 等待初始化保存后检查导航布局` |
-| `ci` | 调整自动验证或部署流程 | `ci(pages): 部署前验证网页子路径与数据保存` |
-| `chore` | 其他仓库维护 | `chore(git): 说明构建产物和本机签名文件的排除规则` |
-| `release` | 准备或记录版本发布 | `release: 准备 Dolphin Schedule v1.5.5` |
-
-示例仅说明标题格式，不代表已经实现或发布这些变更。提交正文可补充原因、影响和实际验证结果，避免只写“更新文件”或“修复问题”。目录 README 只保留职责和入口，详细步骤链接到 `docs/`，减少重复维护。
+例如 `fix(timetable): 避免边缘翻周时横滑抖动`、`docs: 解释原生目录与数据备份范围`。标题说明改动，正文补充原因、影响与实际验证；目录职责放长期文档，避免依赖提交历史才能理解文件用途。
