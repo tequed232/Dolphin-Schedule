@@ -71,12 +71,13 @@ class NativeAcademicImportTest {
     }
     private fun scrollTo(text: String) { compose.onNodeWithTag("academic-import-list").performScrollToNode(hasText(text,substring=false)) }
     private fun data()=(repository.state.value as RepositoryState.Ready).snapshot.data
+    private fun committed()=data().copy(pendingAcademic=null,academicCheck=AcademicCheckState())
 
     @Test fun missingDateComesFirstThenAcknowledgedImportAndUndoKeepBooksAndPreferences() {
         val id=deliver(snapshot())
         compose.onNodeWithText("先设置开学日期").assertIsDisplayed()
         compose.onNodeWithText("确认导入").assertDoesNotExist()
-        assertEquals(baseline,data())
+        assertEquals(baseline,committed())
         compose.onNodeWithText("确认日期并预览").performClick()
         compose.waitUntil(5_000) { model.academicPreview!=null && !model.academicBusy }
         assertEquals(14,model.academicPreview!!.periods.size)
@@ -89,7 +90,7 @@ class NativeAcademicImportTest {
 
         scrollTo("确认导入");compose.onNodeWithText("确认导入").assertIsNotEnabled()
         compose.runOnUiThread { model.applyAcademicImport() }
-        assertEquals(baseline,data())
+        assertEquals(baseline,committed())
         val acknowledgment="我已核对日期、课程与作息，同意替换当前课表。教材和外观保留。"
         scrollTo(acknowledgment);compose.onNodeWithText(acknowledgment).performClick()
         assertTrue(model.academicAcknowledged)
@@ -128,18 +129,19 @@ class NativeAcademicImportTest {
         assertNotNull(model.academicDraft)
         compose.runOnUiThread { model.back() }
         compose.onNodeWithText("放弃识别").performClick()
-        assertNull(model.academicDraft);assertEquals(changed,data())
+        assertNull(model.academicDraft);assertEquals(changed.schedule,data().schedule)
+        compose.waitUntil(5_000) { data().pendingAcademic==null }
     }
     @Test fun inspectingChangesDoesNotAcknowledgeOrWriteThePreview() {
         deliver(snapshot(date=true))
         scrollTo("查看变更明细");compose.onNodeWithText("查看变更明细").performClick()
         compose.onNodeWithTag("schedule-difference-list").performScrollToNode(hasText("原有手动课程"))
         compose.onNodeWithText("原有手动课程").assertIsDisplayed()
-        assertEquals(baseline,data());assertFalse(model.academicAcknowledged)
+        assertEquals(baseline,committed());assertFalse(model.academicAcknowledged)
         compose.onNodeWithTag("schedule-difference-list").performScrollToNode(hasText("返回核对"))
         compose.onNodeWithText("返回核对").performClick()
         compose.onNodeWithTag("schedule-difference-list").assertDoesNotExist()
-        assertEquals(baseline,data());assertNotNull(model.academicDraft);assertFalse(model.academicAcknowledged)
+        assertEquals(baseline,committed());assertNotNull(model.academicDraft);assertFalse(model.academicAcknowledged)
         scrollTo("确认导入");compose.onNodeWithText("确认导入").assertIsNotEnabled()
     }
     @Test fun invalidOrEmptyResultAndUnmatchedRequestsNeverTouchSavedSchedule() {
@@ -159,7 +161,43 @@ class NativeAcademicImportTest {
             model.academicResult(Activity.RESULT_OK,Intent().putExtra("requestId",id).putExtra("cleared",true))
         }
         compose.waitUntil(5_000) { !model.academicBusy }
-        assertEquals(baseline,data());assertNull(model.academicDraft);assertNull(model.academicPending);assertNull(model.academicError)
+        assertEquals(baseline,committed());assertNull(model.academicDraft);assertNull(model.academicPending);assertNull(model.academicError)
+    }
+    @Test fun postponedCandidateSurvivesWithoutSavedStateAndRebasesBeforeConfirming() {
+        deliver(snapshot(date=true))
+        val pending=requireNotNull(data().pendingAcademic)
+        compose.runOnUiThread { model.postponeAcademic() }
+        assertNull(model.academicDraft);assertEquals(pending,data().pendingAcademic)
+        val fresh=DolphinViewModel(context.applicationContext as Application,SavedStateHandle())
+        val store=ViewModelStore().apply { put("restarted",fresh) }
+        try {
+            compose.waitUntil(5_000) { fresh.state.value is RepositoryState.Ready }
+            compose.runOnUiThread { fresh.openAcademicUpdate() }
+            compose.waitUntil(5_000) { !fresh.academicBusy && fresh.academicDraft!=null }
+            assertEquals(pending.id,fresh.academicDraft!!.id);assertFalse(fresh.academicAcknowledged)
+            runBlocking { repository.update { it.copy(schedule=it.schedule.copy(courses=it.schedule.courses.map { c->c.copy(notes="新备注") })) } }
+            compose.runOnUiThread { fresh.rebaseAcademicUpdate() }
+            compose.waitUntil(5_000) { !fresh.academicBusy }
+            assertEquals(data().schedule,fresh.academicDraft!!.baseline);assertFalse(fresh.academicAcknowledged)
+            assertEquals("新备注",data().schedule.courses.single().notes)
+        } finally { store.clear() }
+    }
+    @Test fun keepingManualCoursesRequiresSeparateConflictConfirmationAndUndoRestoresBoth() {
+        // 使用与教务相同的学期和逐节作息，以验证冲突而非学期映射错误。
+        val school=AcademicImporter.convert(com.dolphin.schedule.data.AcademicCodec.decode(snapshot(date=true)),baseline.schedule)
+        val manual=school.courses.first().copy(id="manual-conflict",name="手动冲突课程",source="manual")
+        runBlocking { repository.update { it.copy(schedule=school.copy(courses=listOf(manual))) } }
+        val before=data().schedule
+        deliver(snapshot(date=true))
+        compose.runOnUiThread { model.keepAcademicManual(true) }
+        assertEquals(3,model.academicPreview!!.courses.size);assertEquals(1,model.academicConflicts.size)
+        compose.runOnUiThread { model.acknowledgeAcademic(true);model.applyAcademicImport() }
+        assertEquals(before,data().schedule)
+        compose.runOnUiThread { model.acknowledgeAcademicConflicts(true);model.acknowledgeAcademic(true);model.applyAcademicImport() }
+        compose.waitUntil(10_000) { !model.busy && data().pendingAcademic==null }
+        assertTrue(data().settings.keepManualOnAcademic);assertEquals(3,data().schedule.courses.size)
+        runBlocking { repository.update { AcademicImporter.undo(it,it.schedule) } }
+        assertEquals(before,data().schedule)
     }
     private fun saveScreen(name: String) {
         compose.mainClock.advanceTimeBy(600);compose.waitForIdle();android.os.SystemClock.sleep(350)

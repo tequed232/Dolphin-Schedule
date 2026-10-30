@@ -41,7 +41,8 @@
     "scripts/README.md",
     "gradle/wrapper/README.md",
     "docs/README.md",
-    "app/src/main/assets/academic/extract.js"
+    "app/src/main/assets/academic/extract.js",
+    "app/src/main/assets/academic/check.js"
   ],
   "allowedPatterns": [
     ".github/**/*.md",

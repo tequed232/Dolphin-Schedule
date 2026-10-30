@@ -37,6 +37,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +75,9 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
     var academicError by mutableStateOf<String?>(null);private set
     var academicBusy by mutableStateOf(saved.get<String>("academicDraft")!=null);private set
     var academicAcknowledged by mutableStateOf(false);private set
+    var academicKeepManual by mutableStateOf(false);private set
+    var academicConflicts by mutableStateOf<List<Pair<Course,Course>>>(emptyList());private set
+    var academicConflictsAcknowledged by mutableStateOf(false);private set
     var discardAcademic by mutableStateOf(false)
     private var leaveAfterDiscard=false
     private var initialized=false
@@ -113,7 +118,20 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
         reload()
         saved.get<String>("academicDraft")?.let { id -> viewModelScope.launch {
             academicBusy=true
-            try { academicDraft=withContext(Dispatchers.IO) { academicStore.load(id) };rebuildAcademicPreview() }
+            try {
+                val draft=withContext(Dispatchers.IO) { academicStore.load(id) }
+                val current=state.filterIsInstance<RepositoryState.Ready>().first().snapshot.data
+                val pending=current.pendingAcademic
+                if(pending!=null) {
+                    academicDraft=AcademicDraft(pending.id,pending.baseline,pending.raw,AcademicCodec.decode(pending.raw),pending.confirmedDate)
+                } else {
+                    fun withoutSource(s: Schedule)=s.copy(courses=s.courses.map { it.copy(source="") })
+                    val adjusted=if(withoutSource(draft.baseline)==withoutSource(current.schedule))draft.copy(baseline=current.schedule) else draft
+                    repository.update { if(it.pendingAcademic!=null)it else it.copy(pendingAcademic=PendingAcademicUpdate(adjusted.id,adjusted.raw,adjusted.baseline,java.time.Instant.now().toString(),adjusted.confirmedDate)) }
+                    academicDraft=adjusted
+                }
+                academicKeepManual=current.settings.keepManualOnAcademic;rebuildAcademicPreview()
+            }
             catch(cancelled: CancellationException) { throw cancelled }
             catch(failure: Exception) { academicError=failure.message ?: "上次识别结果无法恢复，请重新识别";saved.remove<String>("academicDraft") }
             finally { academicBusy=false }
@@ -132,6 +150,21 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
     fun reload() { viewModelScope.launch {
         val result=repository.initialize()
         if(!initialized && result is RepositoryState.Ready) { initialized=true;if(saved.get<String>("tab")==null)tab=if(result.snapshot.data.settings.timetableMode=="grid") MainTab.GRID else MainTab.LIST }
+        val marker=getApplication<Application>().getSharedPreferences("academic-upgrade",Application.MODE_PRIVATE)
+        if(result is RepositoryState.Ready && !marker.getBoolean("pendingMigrated",false)) {
+            val migrated=runCatching {
+            if(result.snapshot.data.pendingAcademic==null && saved.get<String>("academicDraft")==null) {
+                val legacy=withContext(Dispatchers.IO) { academicStore.latestLegacyDraft() }
+                if(legacy!=null)repository.update { current ->
+                    fun withoutSource(s: Schedule)=s.copy(courses=s.courses.map { it.copy(source="") })
+                    val base=if(withoutSource(legacy.baseline)==withoutSource(current.schedule))current.schedule else legacy.baseline
+                    if(current.pendingAcademic==null)current.copy(pendingAcademic=PendingAcademicUpdate(legacy.id,legacy.raw,base,java.time.Instant.now().toString(),legacy.confirmedDate)) else current
+                }
+            }
+            true
+            }.getOrElse { if(it is CancellationException)throw it;message("旧识别结果暂未恢复，稍后重新打开应用重试");false }
+            if(migrated)marker.edit().putBoolean("pendingMigrated",true).commit()
+        }
     } }
     fun selectDate(date: LocalDate) { require(date.year in 1900..9999);if(firstMonday(date.toString())!=firstMonday(selectedDate.toString()))layout.exit();selectedDate=date;saved["date"]=date.toString() }
     fun moveDate(days: Long) { runCatching { selectDate(selectedDate.plusDays(days)) }.onFailure { message("已到可选日期边界") } }
@@ -174,7 +207,7 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
             require(original==plan.original && data.schedule.term==plan.baseline.term && data.schedule.periods==plan.baseline.periods) { "课程或作息已变化，请保留草稿并重新核对" }
             val overlaps=data.schedule.courses.filter { coursesConflict(course,it,data.schedule) }
             if(overlaps.isNotEmpty() && !allowConflict)throw CourseCollision(course,overlaps)
-            data.copy(schedule=validateSchedule(data.schedule.copy(courses=data.schedule.courses.filterNot { it.id==course.id }+course)))
+            data.copy(schedule=validateSchedule(data.schedule.copy(courses=data.schedule.courses.filterNot { it.id==course.id }+course.copy(source="manual"))))
         }
     }
     fun deleteCourse(course: Course) { change("课程已删除",after={detailId=null;cancelEdit()}) { data ->
@@ -183,6 +216,7 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
     } }
     fun prepareAcademicRequest(clear: Boolean=false): String? {
         if(busy || academicBusy || academicPending!=null || academicDraft!=null)return null
+        if(!clear && (state.value as? RepositoryState.Ready)?.snapshot?.data?.pendingAcademic!=null) { openAcademicUpdate();return null }
         val id=UUID.randomUUID().toString();academicPending=id;saved["academicPending"]=id;saved["academicClear"]=clear;academicError=null
         return id
     }
@@ -197,7 +231,11 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
             try {
                 if(resultCode==Activity.RESULT_CANCELED)return@launch
                 require(resultCode==Activity.RESULT_OK && result?.getStringExtra("requestId")==id) { "教务结果不匹配，请重新识别；原课表保留" }
-                if(clear) { require(result.getBooleanExtra("cleared",false)) { "登录清理未完成，请重试" };message("教务登录已清除");return@launch }
+                if(clear) {
+                    require(result.getBooleanExtra("cleared",false)) { "登录清理未完成，请重试" }
+                    repository.update { it.copy(settings=it.settings.copy(academicCheckHours=0),academicCheck=AcademicCheckState("login",java.time.Instant.now().toString(),"教务登录已清除，周期检查已关闭")) }
+                    message("教务登录已清除");return@launch
+                }
                 require(!result.getBooleanExtra("cleared",false)) { "未收到课表，请重新识别" }
                 val current=(repository.state.value as? RepositoryState.Ready)?.snapshot?.data ?: error("本地课表尚未读取完成")
                 val draft=withContext(Dispatchers.IO) {
@@ -206,7 +244,11 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
                     val raw=file.readText(Charsets.UTF_8)
                     AcademicDraft(id,current.schedule,raw,AcademicCodec.decode(raw)).also { academicStore.save(it);file.delete() }
                 }
-                academicDraft=draft;saved["academicDraft"]=id;academicAcknowledged=false;rebuildAcademicPreview()
+                repository.update(current.schedule) {
+                    require(it.pendingAcademic==null) { "已有一份待确认更新，请先核对或放弃；原课表保留" }
+                    it.copy(pendingAcademic=PendingAcademicUpdate(id,draft.raw,draft.baseline,java.time.Instant.now().toString()),academicCheck=AcademicCheckState("pending",java.time.Instant.now().toString(),"识别结果已暂存，等待核对"))
+                }
+                academicDraft=draft;saved["academicDraft"]=id;academicKeepManual=current.settings.keepManualOnAcademic;academicAcknowledged=false;rebuildAcademicPreview()
                 if(pages.lastOrNull()!=NativePage.IMPORT)open(NativePage.IMPORT)
             } catch(cancelled: CancellationException) { throw cancelled }
             catch(failure: Exception) { academicError=failure.message ?: "教务结果读取失败，原课表保留" }
@@ -217,13 +259,15 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
         }
     }
     private fun rebuildAcademicPreview() {
-        academicAcknowledged=false
+        academicAcknowledged=false;academicConflictsAcknowledged=false;academicConflicts=emptyList()
         val draft=academicDraft ?: return
         if(draft.confirmedDate==null && draft.snapshot.termStartDate==null) { academicPreview=null;academicError=null;return }
-        runCatching { AcademicImporter.convert(draft.snapshot,draft.baseline,draft.confirmedDate) }
-            .onSuccess { academicPreview=it;academicError=null }.onFailure { academicPreview=null;academicError=it.message ?: "课表内容无法识别" }
+        runCatching { academicMerge(draft.baseline,AcademicImporter.convert(draft.snapshot,draft.baseline,draft.confirmedDate),academicKeepManual) }
+            .onSuccess { academicPreview=it.schedule;academicConflicts=it.conflicts;academicError=null }.onFailure { academicPreview=null;academicError=it.message ?: "课表内容无法识别" }
     }
-    fun acknowledgeAcademic(checked: Boolean) { academicAcknowledged=checked && academicPreview!=null && !academicBusy }
+    fun acknowledgeAcademic(checked: Boolean) { academicAcknowledged=checked && academicPreview!=null && !academicBusy && (academicConflicts.isEmpty() || academicConflictsAcknowledged) }
+    fun keepAcademicManual(value: Boolean) { if(!busy && !academicBusy) { academicKeepManual=value;rebuildAcademicPreview() } }
+    fun acknowledgeAcademicConflicts(value: Boolean) { academicConflictsAcknowledged=value;academicAcknowledged=false }
     fun invalidateAcademicAcknowledgment() { academicAcknowledged=false }
     fun updateAcademicDate(date: String) {
         val draft=academicDraft ?: return
@@ -234,6 +278,10 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
             try {
                 require(runCatching { LocalDate.parse(date).year in 1900..9999 }.getOrDefault(false)) { "请选择有效的开学日期" }
                 val changed=draft.copy(confirmedDate=date)
+                repository.update {
+                    require(it.pendingAcademic?.id==draft.id) { "待确认更新已变化，请重新打开核对" }
+                    it.copy(pendingAcademic=it.pendingAcademic!!.copy(confirmedDate=date))
+                }
                 withContext(Dispatchers.IO) { academicStore.save(changed) }
                 academicDraft=changed;rebuildAcademicPreview()
             } catch(cancelled: CancellationException) { throw cancelled }
@@ -248,10 +296,55 @@ class DolphinViewModel(application: Application,private val saved: SavedStateHan
             clearAcademicDraft();pages.clear();savePages();selectDate(firstMonday(preview.term.startDate))
             val preferences=(repository.state.value as RepositoryState.Ready).snapshot.data.settings
             select(if(preferences.timetableMode=="grid")MainTab.GRID else MainTab.LIST)
-        }) { AcademicImporter.apply(it,preview) }
+        }) {
+            require(it.pendingAcademic?.id==draft.id) { "待确认更新已变化，请重新打开核对" }
+            val merged=academicMerge(it.schedule,AcademicImporter.convert(draft.snapshot,it.schedule,draft.confirmedDate),academicKeepManual)
+            require(merged.schedule==preview && (merged.conflicts.isEmpty() || academicConflictsAcknowledged)) { "保留课程的冲突需要重新核对" }
+            AcademicImporter.apply(it,preview).copy(settings=it.settings.copy(keepManualOnAcademic=academicKeepManual),academicCheck=AcademicCheckState("applied",java.time.Instant.now().toString(),"教务更新已确认保存"))
+        }
     }
     fun requestDiscardAcademic(leave: Boolean=false) { if(!busy && !academicBusy) { leaveAfterDiscard=leave;discardAcademic=true } }
-    fun confirmDiscardAcademic() { if(!busy && !academicBusy) { clearAcademicDraft();discardAcademic=false;if(leaveAfterDiscard)back() } }
+    fun confirmDiscardAcademic() {
+        if(!busy && !academicBusy) {
+            val id=academicDraft?.id
+            clearAcademicDraft();discardAcademic=false;if(leaveAfterDiscard)back()
+            viewModelScope.launch { runCatching { repository.update { if(it.pendingAcademic?.id==id)it.copy(pendingAcademic=null,academicCheck=AcademicCheckState("dismissed",java.time.Instant.now().toString(),"已放弃本次待确认更新")) else it } }.onFailure { error="待确认记录未能移除，请重试；课表保留" } }
+        }
+    }
+    fun openAcademicUpdate() {
+        val data=(state.value as? RepositoryState.Ready)?.snapshot?.data ?: return
+        val pending=data.pendingAcademic ?: return
+        if(busy || academicBusy)return
+        academicBusy=true
+        viewModelScope.launch {
+            try {
+                val draft=withContext(Dispatchers.IO) {
+                    AcademicDraft(pending.id,pending.baseline,pending.raw,AcademicCodec.decode(pending.raw),pending.confirmedDate).also { academicStore.save(it) }
+                }
+                academicDraft=draft;saved["academicDraft"]=draft.id;academicKeepManual=data.settings.keepManualOnAcademic;rebuildAcademicPreview();open(NativePage.IMPORT)
+            } catch(cancelled: CancellationException) { throw cancelled }
+            catch(failure: Exception) { academicError=failure.message ?: "待确认更新无法读取，原课表保留" }
+            finally { academicBusy=false }
+        }
+    }
+    fun postponeAcademic() {
+        if(!busy && !academicBusy) { academicDraft=null;academicPreview=null;academicAcknowledged=false;saved.remove<String>("academicDraft");if(pages.lastOrNull()==NativePage.IMPORT)popPage();message("教务结果已保留，可稍后核对") }
+    }
+    fun rebaseAcademicUpdate() {
+        val draft=academicDraft ?: return
+        val current=(state.value as? RepositoryState.Ready)?.snapshot?.data ?: return
+        if(busy || academicBusy)return
+        academicBusy=true
+        viewModelScope.launch {
+            try {
+                val updated=draft.copy(baseline=current.schedule)
+                repository.update(current.schedule) { require(it.pendingAcademic?.id==draft.id) { "更新记录已变化" };it.copy(pendingAcademic=it.pendingAcademic!!.copy(baseline=current.schedule)) }
+                withContext(Dispatchers.IO) { academicStore.save(updated) };academicDraft=updated;rebuildAcademicPreview()
+            } catch(cancelled: CancellationException) { throw cancelled }
+            catch(failure: Exception) { academicError=failure.message ?: "重新核对失败，原课表保留" }
+            finally { academicBusy=false }
+        }
+    }
     private fun clearAcademicDraft() {
         val id=academicDraft?.id;academicDraft=null;academicPreview=null;academicError=null;academicAcknowledged=false;saved.remove<String>("academicDraft")
         if(id!=null)viewModelScope.launch(Dispatchers.IO) { runCatching { academicStore.delete(id) } }

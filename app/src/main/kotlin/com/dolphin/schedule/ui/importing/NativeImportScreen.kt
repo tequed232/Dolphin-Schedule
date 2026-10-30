@@ -28,14 +28,16 @@ fun NativeImportScreen(data: AppData,model: DolphinViewModel,onAcademic: (Boolea
     val busy=model.busy || model.academicBusy || model.academicPending!=null
     if(draft==null) {
         LazyColumn(Modifier.fillMaxSize().testTag("academic-import-list"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            if(data.pendingAcademic!=null)item { AcademicPendingBanner(model::openAcademicUpdate) }
             item { Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.primaryContainer) {
                 Column(Modifier.fillMaxWidth().padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     Text("从教务导入",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
                     Text("登录学校教务，进入个人学期课表后识别。",style=MaterialTheme.typography.bodyMedium)
-                    Button(onClick={onAcademic(false)},enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text(if(model.academicPending!=null)"教务页面已打开" else "打开学校教务") }
+                    Button(onClick={if(data.pendingAcademic!=null)model.openAcademicUpdate() else onAcademic(false)},enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text(if(data.pendingAcademic!=null)"核对待确认结果" else if(model.academicPending!=null)"教务页面已打开" else "打开学校教务") }
                 }
             } }
             item { OutlinedButton(onClick={model.open(NativePage.FILE_IMPORT)},enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("从文件导入 · JSON / CSV / Excel") } }
+            item { AcademicCheckSettings(data,model) }
             item { Text("选择完整学期，取消“大节次”后查询。识别结果会先预览，确认后保存。",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
             if(model.academicBusy)item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             model.academicError?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
@@ -66,9 +68,29 @@ fun NativeImportScreen(data: AppData,model: DolphinViewModel,onAcademic: (Boolea
             } }
             if(model.academicBusy)item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             model.academicError?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
-            if(stale)item { Text("当前课表已更新。这份预览不能直接覆盖，请重新识别并核对。",color=MaterialTheme.colorScheme.error) }
+            if(stale)item {
+                Text("当前课表已更新。这份预览不能直接覆盖，请按最新课表重新核对。",color=MaterialTheme.colorScheme.error)
+                OutlinedButton(onClick=model::rebaseAcademicUpdate,enabled=!busy) { Text("按最新课表重新核对") }
+            }
+            if(draft.baseline.courses.any { it.source!="academic:gdcmxy" })item {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) { Text("保留手动及来源不明的课程");Text("只按明确来源保护；作息不能安全对应时停止合并。",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(model.academicKeepManual,model::keepAcademicManual,enabled=!busy)
+                }
+            }
             if(preview!=null) {
                 item { SchedulePreviewSummary(draft.baseline,preview,showDate=false) }
+                if(model.academicConflicts.isNotEmpty())item {
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text("保留课程有 ${model.academicConflicts.size} 项时间冲突",color=MaterialTheme.colorScheme.error)
+                        model.academicConflicts.take(20).forEach { (a,b) -> Text("${a.name} 与 ${b.name} · ${weekdayLabel(a.day)}",style=MaterialTheme.typography.bodySmall) }
+                        if(model.academicConflicts.size>20)Text("另有 ${model.academicConflicts.size-20} 项；建议先调整课程后再导入。",style=MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment=Alignment.CenterVertically) {
+                            Checkbox(model.academicConflictsAcknowledged,model::acknowledgeAcademicConflicts,enabled=!busy)
+                            Text("我已核对冲突，仍保留这些课程。",style=MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
                 preview.importNotes.filterNot { it.startsWith("开学日期：") }.forEach { note -> item { Text(note,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
                 item { TextButton(onClick={showTimes=!showTimes}) { Text(if(showTimes)"收起逐节作息" else "展开逐节作息 · ${preview.periods.size} 节") } }
                 if(showTimes)item { Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) {
@@ -87,13 +109,14 @@ fun NativeImportScreen(data: AppData,model: DolphinViewModel,onAcademic: (Boolea
                         }
                     }
                 }
-                item { Row(Modifier.fillMaxWidth().clickable(enabled=!busy && !dateUnapplied && !stale) { model.acknowledgeAcademic(!model.academicAcknowledged) }.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Checkbox(model.academicAcknowledged,{model.acknowledgeAcademic(it)},enabled=!busy && !dateUnapplied && !stale)
+                item { Row(Modifier.fillMaxWidth().clickable(enabled=!busy && !dateUnapplied && !stale && (model.academicConflicts.isEmpty() || model.academicConflictsAcknowledged)) { model.acknowledgeAcademic(!model.academicAcknowledged) }.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Checkbox(model.academicAcknowledged,{model.acknowledgeAcademic(it)},enabled=!busy && !dateUnapplied && !stale && (model.academicConflicts.isEmpty() || model.academicConflictsAcknowledged))
                     Text("我已核对日期、课程与作息，同意替换当前课表。教材和外观保留。",style=MaterialTheme.typography.bodyMedium)
                 } }
                 item { Button(onClick=model::applyAcademicImport,enabled=model.academicAcknowledged && !busy && !dateUnapplied && !stale,modifier=Modifier.fillMaxWidth()) { Text(if(model.busy)"正在保存" else "确认导入") } }
             }
             item { TextButton(onClick={model.requestDiscardAcademic()},enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("放弃这次识别") } }
+            item { OutlinedButton(onClick=model::postponeAcademic,enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("稍后核对") } }
         }
         if(picker)ImportDatePicker(date,onDismiss={picker=false}) { selected -> date=selected;picker=false;model.invalidateAcademicAcknowledgment() }
     }

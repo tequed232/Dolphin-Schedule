@@ -59,14 +59,14 @@ object AcademicImporter {
             val key=contentKey(course);val old=existing[key]
             val id=old?.id ?: "gdcmxy-"+MessageDigest.getInstance("SHA-256").digest(key.toByteArray(Charsets.UTF_8)).take(12).joinToString("") { "%02x".format(it.toInt() and 255) }
             require(identifiers[id]==null || identifiers[id]==key) { "课程标识冲突，请保留原课表并反馈" };identifiers[id]=key
-            course.copy(id=id,color=old?.color ?: COURSE_COLORS[(course.day+course.start)%COURSE_COLORS.size])
+            course.copy(id=id,color=old?.color ?: COURSE_COLORS[(course.day+course.start)%COURSE_COLORS.size],source="academic:gdcmxy")
         }
         val notes=mutableListOf(if(confirmedDate!=null) "开学日期：使用你确认的日期。" else "开学日期：来自教务系统的同一学期，请核对。")
         if(canonical.any { it.room.isEmpty() })notes+="部分课程没有地点，已保留课程，可稍后补充。"
         return validateSchedule(Schedule(Term(value.term,startDate,value.endWeek),value.rows.map { Period(it.start,it.end,it.label) },canonical,notes),allowEmpty=false)
     }
     fun difference(before: Schedule,after: Schedule): ScheduleDifference = compareSchedules(before,after)
-    fun apply(data: AppData,schedule: Schedule): AppData=data.copy(schedule=validateSchedule(schedule,allowEmpty=false),onboarded=true,
+    fun apply(data: AppData,schedule: Schedule): AppData=data.copy(schedule=validateSchedule(schedule,allowEmpty=false),onboarded=true,pendingAcademic=null,
         academicImport=AcademicHistory("gdcmxy",schedule.term.name,Instant.now().toString(),data.schedule,schedule))
     fun undo(data: AppData,expected: Schedule): AppData {
         require(data.schedule==expected) { "课表已变化，请重新查看撤销预览" }

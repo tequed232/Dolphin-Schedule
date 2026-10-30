@@ -27,8 +27,12 @@ import kotlinx.coroutines.launch
 class NativeActivity: ComponentActivity() {
     private val model: DolphinViewModel by viewModels()
     private val academic=registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { model.academicResult(it.resultCode,it.data) }
+    private val dataChanged=object: android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context,intent: Intent) { lifecycleScope.launch { model.repository.refresh() } }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.core.content.ContextCompat.registerReceiver(this,dataChanged,android.content.IntentFilter(packageName+".DATA_CHANGED"),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         Notifications.channels(this)
         enableEdgeToEdge()
         setContent { DolphinApp(model,onExit={finish()},onAcademic={ clear ->
@@ -42,8 +46,9 @@ class NativeActivity: ComponentActivity() {
             }
         }) }
         handleIntent(intent)
-        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.RESUMED) { model.state.filterIsInstance<RepositoryState.Ready>().first();model.notifications.resume() } }
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.RESUMED) { model.repository.refresh();model.state.filterIsInstance<RepositoryState.Ready>().first();model.notifications.resume() } }
     }
+    override fun onDestroy() { unregisterReceiver(dataChanged);super.onDestroy() }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent);setIntent(intent);handleIntent(intent) }
     private fun handleIntent(source: Intent) {
         val id=source.getStringExtra("courseId")

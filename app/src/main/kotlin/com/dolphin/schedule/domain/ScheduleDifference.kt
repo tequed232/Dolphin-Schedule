@@ -14,7 +14,7 @@ data class ScheduleDifference(
 
 /** 仅生成预览，不修改课表。多条同名记录不能唯一对应时，保留为新增/移除。 */
 fun compareSchedules(before: Schedule,after: Schedule): ScheduleDifference {
-    fun content(course: Course)=course.copy(id="",weeks=course.weeks.distinct().sorted())
+    fun content(course: Course)=course.copy(id="",weeks=course.weeks.distinct().sorted(),source="")
     val old=before.courses.indices.toMutableSet();val next=after.courses.indices.toMutableSet()
     val identical=after.courses.indices.groupBy { content(after.courses[it]) }
         .mapValues { (_,indices)->java.util.ArrayDeque(indices) }

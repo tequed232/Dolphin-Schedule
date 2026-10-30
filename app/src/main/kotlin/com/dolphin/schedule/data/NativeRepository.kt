@@ -96,9 +96,23 @@ class NativeRepository internal constructor(context: Context,private val legacyR
             next
         }
     }
+    /** 其他私有进程完成检查后按数据库修订号刷新；不依赖跨进程 SharedPreferences 缓存。 */
+    suspend fun refresh()=withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val db=helper.readableDatabase
+            val revision=db.rawQuery("SELECT revision FROM app_state WHERE id=1",null).use { if(it.moveToFirst())it.getLong(0) else -1 }
+            if((mutable.value as? RepositoryState.Ready)?.snapshot?.revision!=revision)read(db)?.let(::publish)
+        }
+    }
     private fun read(db: SQLiteDatabase): StoredData?=db.rawQuery("SELECT payload,revision FROM app_state WHERE id=1",null).use { rows -> if(rows.moveToFirst()) StoredData(AppDataCodec.decode(rows.getString(0)),rows.getLong(1)) else null }
     private fun publish(snapshot: StoredData) {
         mutable.value=RepositoryState.Ready(snapshot)
+        app.sendBroadcast(android.content.Intent(app.packageName+".DATA_CHANGED").setPackage(app.packageName))
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            if((mutable.value as? RepositoryState.Ready)?.snapshot?.revision==snapshot.revision)runCatching {
+                com.dolphin.schedule.academic.AcademicCheckScheduler.sync(app,snapshot.data)
+            }.onFailure { mutableWarning.value="课表已保存，但系统暂未接受教务周期检查，请稍后重试" }
+        }
         // 只镜像行程所需的目标和教材标题；不保存第二份课表或安排自动提醒。
         runCatching {
             val data=snapshot.data

@@ -74,6 +74,7 @@ adb -s emulator-5562 shell am instrument -w -e allowNativeDataTests true -e notC
 | 地图与系统交互 | 高德客户端入口、网页回退、通知目标校验、预测式返回与取消、旧 WebView 独立进程 |
 | 更新与关于 | 正式版本内容、离线许可、精简引导和失败重试 |
 | 数据事务 | SQLite 回滚、并发、原文迁移备份和过期预览保护 |
+| 教务更新 | `AcademicCheckTest` 验证候选、失败保留、登录失效、关闭竞争、任务约束；`NativeAcademicImportTest` 验证无 SavedState 恢复、合并冲突和撤销。两组仅接受明确授权的隔离模拟器 |
 
 测试工作簿由 `scripts/build/native-import-fixtures.mjs` 生成，图片在测试时生成。系统选图测试只向隔离模拟器写入临时图片，结束后清理自身记录。学校测试使用合成结果，不代表真实学校网络、验证码和会话已经验证；组件更新测试也不代表 GitHub 当时可用。结果必须以本次实际执行日志为准，不沿用历史通过数。
 

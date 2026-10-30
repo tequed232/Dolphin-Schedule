@@ -50,6 +50,7 @@ open class AcademicActivity : ComponentActivity() {
     private var leaving = false
     private var pageFailure = false
     private var requestId = ""
+    private var sessionGateEntered=false
     private val handler = Handler(Looper.getMainLooper())
     private val browserBack=object: OnBackPressedCallback(false) {
         override fun handleOnBackStarted(backEvent: BackEventCompat) { browser?.animate()?.cancel() }
@@ -76,6 +77,7 @@ open class AcademicActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this,browserBack)
         requestId = intent.getStringExtra("requestId") ?: ""
         if(!AcademicPolicy.requestId(requestId)) { finish(); return }
+        AcademicSessionGate.enterInteractive();sessionGateEntered=true
         try { prepareStorage() } catch(_: Exception) {
             AlertDialog.Builder(this).setTitle("教务浏览暂不可用")
                 .setMessage("无法准备独立的教务登录存储。请重新打开 App；原课表保留。")
@@ -289,6 +291,7 @@ open class AcademicActivity : ComponentActivity() {
             }
             (web.parent as? android.view.ViewGroup)?.removeView(web); web.stopLoading(); web.destroy()
         }; browser = null
+        if(sessionGateEntered)AcademicSessionGate.leaveInteractive()
         super.onDestroy()
     }
     companion object {

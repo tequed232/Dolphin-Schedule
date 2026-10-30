@@ -34,4 +34,7 @@ class AcademicDraftStore(context: Context) {
         return AcademicDraft(id,AppDataCodec.decodeSchedule(value.getJSONObject("baseline")),raw,AcademicCodec.decode(raw),if(value.isNull("confirmedDate")) null else value.getString("confirmedDate"))
     }
     fun delete(id: String) { AtomicFile(file(id)).delete() }
+    /** 首次升级补救旧版仅在 Activity 状态保存标识的草稿；以后由数据库指针管理。 */
+    fun latestLegacyDraft(): AcademicDraft? = folder.listFiles()?.filter { it.extension=="json" && AcademicPolicy.requestId(it.nameWithoutExtension) }
+        ?.sortedByDescending { it.lastModified() }?.take(10)?.firstNotNullOfOrNull { target -> runCatching { load(target.nameWithoutExtension) }.getOrNull() }
 }

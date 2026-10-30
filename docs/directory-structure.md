@@ -34,7 +34,7 @@ Dolphin-Schedule/
 │     │  │  ├─ importing/
 │     │  │  ├─ academic/
 │     │  │  └─ media/
-│     │  ├─ assets/academic/extract.js
+│     │  ├─ assets/academic/           extract.js 提取；check.js 只读查询准备
 │     │  └─ res/
 │     ├─ test/kotlin/                  JVM 单元测试
 │     └─ androidTest/kotlin/           Compose 与系统交互测试
@@ -86,6 +86,10 @@ Kotlin 主源码、JVM 测试和设备测试分别统一位于 `src/main/kotlin/
 | `data/*DraftStore.kt` | 导入和编辑草稿的私有文件 | 不把大图片或整份文件塞进 Activity 状态 |
 | `importing/` | 文件格式识别、Excel 解码、映射、预览和草稿 | 解码单元格与生成课表分别处理 |
 | `academic/` | 教务浏览器、访问白名单、会话和结果交接 | 不接管密码，不开放任意应用桥 |
+| `academic/AcademicCheckScheduler.kt` / `AcademicCheckJobService.kt` | 可选周期与立即检查的系统任务 | 默认关闭，系统安排，不启动前台通知或后台页面 |
+| `academic/AcademicBackgroundReader.kt` / `AcademicCheckRunner.kt` | 复用隔离会话只读查询、校验、保存候选 | 不自动导入，不覆盖读取期间出现的新候选或编辑 |
+| `domain/AcademicMerge.kt` | 明确来源课程保留、节次映射与冲突清单 | 按准确时间匹配，不按名称猜来源 |
+| `ui/importing/AcademicCheckSettings.kt` | App 内待确认提示、频率及立即检查入口 | 不新增系统课表变化通知 |
 | `media/` | 本地图片压缩、方向校正和有界缓存 | 图片只在本机处理 |
 | `notifications/Notifications.kt` / `JourneyState.kt` | 导航后的行程展示、令牌和旧功能清理 | 不创建课前提醒或常驻桌宠 |
 | `notifications/NotificationRoute.kt` | 点击通知后的原生课程路由 | 校验目标，避免错误打开过期课程 |

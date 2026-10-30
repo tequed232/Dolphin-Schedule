@@ -8,6 +8,12 @@ class CourseLayoutTest {
     private val course=Course(id="move",name="合成课程",day=1,start=1,end=2,weeks=listOf(1,3),notes="保留备注",teacher="合成教师")
     private val schedule=Schedule(Term("合成学期","2026-10-26",21),listOf(Period("08:00","08:40","1"),Period("08:50","09:30","2"),Period("12:10","12:50","中午1"),Period("14:00","14:40","3"),Period("14:50","15:30","4")),listOf(course))
     private val date=LocalDate.of(2026,10,26)
+    @Test fun explicitlyMovingAnAcademicCourseProtectsItAsManualForFutureImports() {
+        val academic=course.copy(source="academic:gdcmxy")
+        val before=schedule.copy(courses=listOf(academic))
+        val next=applyLayoutChange(before,before,academic,academic.copy(day=2))
+        assertEquals(academic.copy(day=2,source="manual"),next.courses.single())
+    }
     @Test fun movingSkipsCollapsedNoonAndRetainsDurationWeeksAndMetadata() {
         val rows=displayTimetableRows(schedule)
         val result=layoutCandidate(schedule,course,date,LayoutEdge.MOVE,2,rows.take(3).sumOf { it.height.toDouble() }.toFloat(),rows)

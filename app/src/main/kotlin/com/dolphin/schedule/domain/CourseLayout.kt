@@ -38,5 +38,5 @@ fun applyLayoutChange(current: Schedule,baseline: Schedule,original: Course,next
     require(next.start in 1..current.periods.size && next.end in next.start..current.periods.size)
     val overlaps=current.courses.filter { coursesConflict(next,it,current) }
     if(overlaps.isNotEmpty() && (approvedConflicts==null || overlaps.toSet()!=approvedConflicts.toSet()))throw LayoutConflict(overlaps)
-    return validateSchedule(current.copy(courses=current.courses.map { if(it.id==original.id)next else it }))
+    return validateSchedule(current.copy(courses=current.courses.map { if(it.id==original.id)next.copy(source="manual") else it }))
 }

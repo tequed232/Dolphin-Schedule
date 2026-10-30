@@ -19,22 +19,39 @@ object AppDataCodec {
     fun decode(raw: String): AppData {
         val value=parseObject(raw)
         require(value.optInt("schema",1)==1) { "无法识别这个备份版本" }
-        val schedule=decodeSchedule(value.getJSONObject("schedule"))
+        val decoded=decodeSchedule(value.getJSONObject("schedule"))
         val books=value.optJSONObject("books") ?: JSONObject()
         require(books.length()<=10000) { "教材数量过多" }
         val history=value.optJSONObject("academicImport")?.let { AcademicHistory(it.getString("school"),it.getString("term"),it.getString("importedAt"),decodeSchedule(it.getJSONObject("before")),decodeSchedule(it.getJSONObject("after"))) }
+        val recorded=history?.after?.courses?.associateBy { it.id }.orEmpty()
+        val schedule=decoded.copy(courses=decoded.courses.map { course ->
+            val prior=recorded[course.id]
+            if(course.source=="unknown" && prior!=null && course.copy(source="")==prior.copy(source=""))course.copy(source="academic:gdcmxy") else course
+        })
         return AppData(
             schedule=schedule,books=books.keys().asSequence().associateWith { id -> books.getJSONObject(id).let { Book(it.text("title"),it.text("publisher"),it.text("edition"),it.optionalText("cover"),it.text("text"),it.text("source","manual")) } },
             settings=decodePreferences(value.optJSONObject("settings") ?: JSONObject()),onboarded=value.optBoolean("onboarded",false),
             background=value.optJSONObject("background")?.let { Background(it.getString("url"),it.text("name"),it.getInt("width"),it.getInt("height"),it.optInt("sourceWidth",it.getInt("width")),it.optInt("sourceHeight",it.getInt("height"))) },
             academicImport=history,
+            pendingAcademic=value.optJSONObject("pendingAcademic")?.let { pending ->
+                val id=pending.getString("id");require(com.dolphin.schedule.academic.AcademicPolicy.requestId(id)) { "待确认更新标识无效" }
+                val raw=pending.getJSONObject("snapshot").toString();val snapshot=AcademicCodec.decode(raw)
+                val base=decodeSchedule(pending.getJSONObject("baseline"));val date=pending.optionalText("confirmedDate")
+                AcademicImporter.convert(snapshot,base,date ?: snapshot.termStartDate ?: base.term.startDate)
+                PendingAcademicUpdate(id,raw,base,pending.getString("receivedAt").also { java.time.Instant.parse(it) },date)
+            },
+            academicCheck=value.optJSONObject("academicCheck")?.let { AcademicCheckState(it.text("status","idle"),it.optionalText("checkedAt"),it.text("message").take(300)) } ?: AcademicCheckState(),
         )
     }
-    fun encode(value: AppData): String {
+    fun encode(value: AppData,includeTransient: Boolean=true): String {
         validateSchedule(value.schedule)
         val books=JSONObject();value.books.forEach { (id,b) -> books.put(id,JSONObject().put("title",b.title).put("publisher",b.publisher).put("edition",b.edition).put("cover",b.cover).put("text",b.text).put("source",b.source)) }
         val result=JSONObject().put("schema",1).put("appearanceRevision",2).put("schedule",encodeSchedule(value.schedule)).put("books",books)
-            .put("settings",encodePreferences(value.settings)).put("onboarded",value.onboarded)
+            .put("settings",encodePreferences(if(includeTransient)value.settings else value.settings.copy(academicCheckHours=0))).put("onboarded",value.onboarded)
+        if(includeTransient) {
+            value.pendingAcademic?.let { pending -> result.put("pendingAcademic",JSONObject().put("id",pending.id).put("snapshot",JSONObject(pending.raw)).put("baseline",encodeSchedule(pending.baseline)).put("receivedAt",pending.receivedAt).put("confirmedDate",pending.confirmedDate)) }
+            result.put("academicCheck",JSONObject().put("status",value.academicCheck.status).put("checkedAt",value.academicCheck.checkedAt).put("message",value.academicCheck.message.take(300)))
+        }
         value.background?.let { result.put("background",JSONObject().put("url",it.url).put("name",it.name).put("width",it.width).put("height",it.height).put("sourceWidth",it.sourceWidth).put("sourceHeight",it.sourceHeight)) }
         value.academicImport?.let { result.put("academicImport",JSONObject().put("school",it.school).put("term",it.term).put("importedAt",it.importedAt).put("before",encodeSchedule(it.before)).put("after",encodeSchedule(it.after))) }
         return result.toString().also { require(it.toByteArray(Charsets.UTF_8).size<=MAX_BYTES) { "本地数据超过 16 MB，请先精简封面图片" } }
@@ -48,7 +65,7 @@ object AppDataCodec {
             courses.objects().map { c ->
                 // 与旧网页的 schema-1 迁移保持一致，未再次保存的旧课表也能直接升级。
                 val start=c.firstInteger(1,"start","startSection","section")
-                Course(c.getString("id"),c.getString("name"),c.text("teacher"),c.text("room"),c.firstInteger(1,"day","dayOfWeek"),start,c.firstInteger(start,"end","endSection","section"),c.getJSONArray("weeks").integers(),c.text("color","sage"),c.text("notes"),c.optBoolean("temporary",false),c.optionalText("specificDate"))
+                Course(c.getString("id"),c.getString("name"),c.text("teacher"),c.text("room"),c.firstInteger(1,"day","dayOfWeek"),start,c.firstInteger(start,"end","endSection","section"),c.getJSONArray("weeks").integers(),c.text("color","sage"),c.text("notes"),c.optBoolean("temporary",false),c.optionalText("specificDate"),c.text("source","unknown"))
             },
             value.optJSONArray("importNotes").strings(),
         ))
@@ -56,7 +73,7 @@ object AppDataCodec {
     fun encodeSchedule(value: Schedule): JSONObject = JSONObject()
         .put("term",JSONObject().put("name",value.term.name).put("startDate",value.term.startDate).put("weeks",value.term.weeks))
         .put("periods",JSONArray(value.periods.map { p -> JSONObject().put("start",p.start).put("end",p.end).put("label",p.label).also { obj -> p.breakAfter?.let { obj.put("breakAfter",JSONObject().put("label",it.label).put("start",it.start).put("end",it.end)) } } }))
-        .put("courses",JSONArray(value.courses.map { c -> JSONObject().put("id",c.id).put("name",c.name).put("teacher",c.teacher).put("room",c.room).put("day",c.day).put("start",c.start).put("end",c.end).put("weeks",JSONArray(c.weeks)).put("color",c.color).put("notes",c.notes).put("temporary",c.temporary).put("specificDate",c.specificDate) }))
+        .put("courses",JSONArray(value.courses.map { c -> JSONObject().put("id",c.id).put("name",c.name).put("teacher",c.teacher).put("room",c.room).put("day",c.day).put("start",c.start).put("end",c.end).put("weeks",JSONArray(c.weeks)).put("color",c.color).put("notes",c.notes).put("temporary",c.temporary).put("specificDate",c.specificDate).put("source",c.source) }))
         .put("importNotes",JSONArray(value.importNotes))
 
     fun decodePreferences(s: JSONObject): Preferences {
@@ -68,6 +85,7 @@ object AppDataCodec {
             topAuto=s.optBoolean("topAuto",d.topAuto),bottomAuto=s.optBoolean("bottomAuto",d.bottomAuto),topInset=s.optInt("topInset",d.topInset).coerceIn(0,100),bottomInset=s.optInt("bottomInset",d.bottomInset).coerceIn(0,100),
             backgroundEnabled=s.optBoolean("backgroundEnabled",d.backgroundEnabled),backgroundBlur=s.optInt("backgroundBlur",d.backgroundBlur).coerceIn(0,30),performance=s.text("performance",d.performance).takeIf { it in listOf("auto","high") } ?: d.performance,
             notificationsEnabled=s.optBoolean("notificationsEnabled",d.notificationsEnabled),journeyLive=s.optBoolean("journeyLive",d.journeyLive),school=s.text("school",d.school),map=s.text("map",d.map),dynamicColor=s.optBoolean("dynamicColor",d.dynamicColor),
+            academicCheckHours=s.optInt("academicCheckHours",0).takeIf { it in listOf(0,6,12,24) } ?: 0,keepManualOnAcademic=s.optBoolean("keepManualOnAcademic",false),
         )
     }
     fun encodePreferences(s: Preferences): JSONObject=JSONObject()
@@ -77,6 +95,7 @@ object AppDataCodec {
         .put("topAuto",s.topAuto).put("bottomAuto",s.bottomAuto).put("topInset",s.topInset).put("bottomInset",s.bottomInset)
         .put("backgroundEnabled",s.backgroundEnabled).put("backgroundBlur",s.backgroundBlur).put("performance",s.performance)
         .put("notificationsEnabled",s.notificationsEnabled).put("journeyLive",s.journeyLive).put("school",s.school).put("map",s.map).put("dynamicColor",s.dynamicColor)
+        .put("academicCheckHours",s.academicCheckHours).put("keepManualOnAcademic",s.keepManualOnAcademic)
 
     private fun JSONObject.text(key: String,fallback: String=""): String=if(isNull(key)) fallback else getString(key)
     private fun JSONObject.firstInteger(fallback: Int,vararg keys: String): Int=keys.firstOrNull { !isNull(it) }?.let(::getInt) ?: fallback

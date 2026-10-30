@@ -15,10 +15,11 @@ assert.match(gradle,/dependsOn\(syncLegal, syncSpreadsheet\)/);
 assert.doesNotMatch(gradle,/buildUi|syncUi|vite|ui\/src/);
 assert.deepEqual(Object.keys(JSON.parse(pkg).dependencies),['@e965/xlsx']);
 const permissions=[...manifest.matchAll(/<uses-permission\b[^>]*android:name="([^"]+)"/g)].map(m=>m[1]).sort();
-assert.deepEqual(permissions,['android.permission.INTERNET','android.permission.POST_NOTIFICATIONS','android.permission.POST_PROMOTED_NOTIFICATIONS']);
+assert.deepEqual(permissions,['android.permission.ACCESS_NETWORK_STATE','android.permission.INTERNET','android.permission.POST_NOTIFICATIONS','android.permission.POST_PROMOTED_NOTIFICATIONS','android.permission.RECEIVE_BOOT_COMPLETED']);
 assert.equal([...manifest.matchAll(/android.intent.category.LAUNCHER/g)].length,1);
 assert.match(manifest,/<activity android:name="\.NativeActivity"[\s\S]*?<category android:name="android.intent.category.LAUNCHER"/);
-assert.doesNotMatch(manifest,/MainActivity|ReminderReceiver|Calendar|BOOT_COMPLETED|SCHEDULE_EXACT_ALARM/);
+assert.doesNotMatch(manifest,/MainActivity|ReminderReceiver|Calendar|android.intent.action.BOOT_COMPLETED|SCHEDULE_EXACT_ALARM/);
+assert.match(manifest,/AcademicCheckJobService" android:permission="android.permission.BIND_JOB_SERVICE"/);
 for(const retired of ['ui/src','app/src/main/kotlin/com/dolphin/schedule/MainActivity.kt','app/src/main/kotlin/com/dolphin/schedule/CalendarSync.kt','app/src/main/kotlin/com/dolphin/schedule/SystemHolidays.kt','app/src/main/kotlin/com/dolphin/schedule/ReminderScheduler.kt']) {
  assert.equal(await access(retired).then(()=>true,()=>false),false,`废弃实现仍存在：${retired}`);
 }
@@ -40,4 +41,4 @@ assert.equal(icon.subarray(0,4).toString(),'RIFF');assert.equal(icon.subarray(8,
 for(const license of ['LICENSE','THIRD_PARTY_NOTICES.md','legal/APACHE-2.0.txt'])assert.ok((await read(license)).length>200);
 await mkdir('build/evidence',{recursive:true});
 await writeFile('build/evidence/native-source-results.json',JSON.stringify({version,permissions,nativeLauncher:true,retiredRuntimeRemoved:true,localMigration:true,extractorGuards:true,localExcelDecoder:true},null,2));
-console.log(`PASS 原生入口、三项权限、已删功能、版本、迁移、教务提取边界与本地 Excel 解码器（${version}）`);
+console.log(`PASS 原生入口、通知与周期检查权限、已删功能、版本、迁移、教务提取边界与本地 Excel 解码器（${version}）`);

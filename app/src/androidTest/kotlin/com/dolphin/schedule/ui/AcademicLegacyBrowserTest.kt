@@ -23,7 +23,7 @@ class AcademicLegacyBrowserTest {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext
         check(InstrumentationRegistry.getArguments().getString("allowNativeDataTests")=="true")
-        check(Build.HARDWARE in listOf("ranchu","goldfish") && Build.MODEL.startsWith("sdk_"))
+        check(Build.HARDWARE in listOf("ranchu","goldfish") && (Build.MODEL.startsWith("sdk_") || Build.MODEL=="Android SDK built for x86_64"))
         val repository=NativeRepository.get(context)
         val before=runBlocking { (repository.initialize() as RepositoryState.Ready).snapshot.data }
         ActivityScenario.launch(NativeActivity::class.java).use {

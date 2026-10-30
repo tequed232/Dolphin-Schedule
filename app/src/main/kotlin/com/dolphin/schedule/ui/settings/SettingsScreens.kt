@@ -175,7 +175,7 @@ private fun BackupSettings(data: AppData,model: DolphinViewModel) {
     var working by remember { mutableStateOf(false) }
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> if(uri!=null)scope.launch {
         working=true
-        runCatching { withContext(Dispatchers.IO) { val snapshot=AppDataCodec.encode(data);requireNotNull(context.contentResolver.openOutputStream(uri,"wt")) { "无法写入备份" }.use { it.write(snapshot.toByteArray(Charsets.UTF_8)) } } }.onSuccess { model.message("备份已导出") }.onFailure { model.error=it.message ?: "备份导出失败" }
+        runCatching { withContext(Dispatchers.IO) { val snapshot=AppDataCodec.encode(data,includeTransient=false);requireNotNull(context.contentResolver.openOutputStream(uri,"wt")) { "无法写入备份" }.use { it.write(snapshot.toByteArray(Charsets.UTF_8)) } } }.onSuccess { model.message("备份已导出") }.onFailure { model.error=it.message ?: "备份导出失败" }
         working=false
     } }
     val restore=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if(uri!=null)scope.launch {
@@ -186,7 +186,7 @@ private fun BackupSettings(data: AppData,model: DolphinViewModel) {
                 while(true) { val n=input.read(buffer);if(n<0)break;require(output.size()+n<=AppDataCodec.MAX_BYTES) { "备份超过 16 MB" };output.write(buffer,0,n) }
                 output.toByteArray()
             }
-            AppDataCodec.decode(bytes.toString(Charsets.UTF_8))
+            AppDataCodec.decode(bytes.toString(Charsets.UTF_8)).let { it.copy(pendingAcademic=null,academicCheck=AcademicCheckState(),settings=it.settings.copy(academicCheckHours=0)) }
         } }.onSuccess { pending=it;expected=data }.onFailure { model.error=it.message ?: "备份无法识别，原数据保留" }
         working=false
     } }

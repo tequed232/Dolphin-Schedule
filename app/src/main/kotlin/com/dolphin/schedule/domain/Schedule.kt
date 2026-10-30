@@ -13,15 +13,18 @@ data class Period(val start: String, val end: String, val label: String? = null,
 data class Course(
     val id: String = UUID.randomUUID().toString(), val name: String, val teacher: String = "", val room: String = "",
     val day: Int, val start: Int, val end: Int, val weeks: List<Int>, val color: String = "sage", val notes: String = "",
-    val temporary: Boolean = false, val specificDate: String? = null,
+    val temporary: Boolean = false, val specificDate: String? = null, val source: String = "manual",
 )
 data class Schedule(val term: Term, val periods: List<Period>, val courses: List<Course> = emptyList(), val importNotes: List<String> = emptyList())
 data class Book(val title: String = "", val publisher: String = "", val edition: String = "", val cover: String? = null, val text: String = "", val source: String = "manual")
 data class Background(val url: String, val name: String, val width: Int, val height: Int, val sourceWidth: Int, val sourceHeight: Int)
 data class AcademicHistory(val school: String, val term: String, val importedAt: String, val before: Schedule, val after: Schedule)
+data class PendingAcademicUpdate(val id: String,val raw: String,val baseline: Schedule,val receivedAt: String,val confirmedDate: String?=null)
+data class AcademicCheckState(val status: String="idle",val checkedAt: String?=null,val message: String="")
 data class AppData(
     val schedule: Schedule = defaultSchedule(), val books: Map<String, Book> = emptyMap(), val settings: Preferences = Preferences(),
     val background: Background? = null, val onboarded: Boolean = false, val academicImport: AcademicHistory? = null,
+    val pendingAcademic: PendingAcademicUpdate? = null,val academicCheck: AcademicCheckState = AcademicCheckState(),
 )
 data class Preferences(
     val timetableMode: String = "list",
@@ -31,6 +34,7 @@ data class Preferences(
     val backgroundEnabled: Boolean = false, val backgroundBlur: Int = 0, val performance: String = "auto",
     val notificationsEnabled: Boolean = true, val journeyLive: Boolean = true,
     val school: String = "", val map: String = "amap", val dynamicColor: Boolean = true,
+    val academicCheckHours: Int = 0,val keepManualOnAcademic: Boolean = false,
 )
 
 const val MAX_PERIODS = 24

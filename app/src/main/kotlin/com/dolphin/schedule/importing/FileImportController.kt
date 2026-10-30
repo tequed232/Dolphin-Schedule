@@ -131,7 +131,7 @@ class FileImportController(private val context: Context,private val repository: 
         if(busy || saving || !acknowledged)return
         saving=true;error=null
         job=scope.launch {
-            try { repository.update(base) { it.copy(schedule=validateSchedule(candidate.schedule),onboarded=true) };clear();message(if(candidate.onlyConfiguration)"作息已更新，课程保留" else "课表已导入");onSaved() }
+            try { repository.update(base) { it.copy(schedule=validateSchedule(if(candidate.onlyConfiguration)candidate.schedule else candidate.schedule.copy(courses=candidate.schedule.courses.map { c -> c.copy(source="file") })),onboarded=true) };clear();message(if(candidate.onlyConfiguration)"作息已更新，课程保留" else "课表已导入");onSaved() }
             catch(cancelled: CancellationException) { throw cancelled }
             catch(failure: Exception) { error=failure.message ?: "保存未完成，导入内容仍保留" }
             finally { saving=false }

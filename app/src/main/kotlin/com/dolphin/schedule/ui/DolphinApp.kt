@@ -92,6 +92,7 @@ fun DolphinApp(model: DolphinViewModel,onExit: ()->Unit,onAcademic: (Boolean)->U
                             val value=current.snapshot.data
                             val welcome=!value.onboarded || model.showGuide
                             Column(Modifier.fillMaxSize().then(pageMotion).then(predictiveBack).testTag("page-content")) {
+                                if(!welcome && page==null && value.pendingAcademic!=null)com.dolphin.schedule.ui.importing.AcademicPendingBanner(model::openAcademicUpdate)
                                 if(welcome)NativeWelcomeScreen(model.busy,{model.finishGuide("import")},{model.finishGuide("manual")},{model.finishGuide()})
                                 else if(page!=null) NativeSettingsPage(page,value,model,onAcademic,performance.reduced)
                                 else savedTabs.SaveableStateProvider(model.tab) { when(model.tab) {
