@@ -106,20 +106,6 @@ fun NativeImportScreen(data: AppData,model: DolphinViewModel,onAcademic: (Boolea
     }}) { Text("确认恢复课表") }},dismissButton={TextButton(enabled=!model.busy,onClick={undo=null}) { Text("取消") }}) }
 }
 
-@Composable
-internal fun SchedulePreviewSummary(before: Schedule,after: Schedule,showDate: Boolean=true) {
-    val difference=remember(before,after) { AcademicImporter.difference(before,after) }
-    Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceVariant) {
-        Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text(after.term.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-            Text("${after.courses.size} 门课程 · ${after.term.weeks} 周 · ${after.periods.size} 节",style=MaterialTheme.typography.bodyMedium)
-            if(showDate)Text("开学日期：${after.term.startDate}",style=MaterialTheme.typography.bodyMedium)
-            Text("增加 ${difference.added.size} 门 · 移除 ${difference.removed.size} 门",style=MaterialTheme.typography.bodyMedium)
-            if(difference.dateChanged || difference.timesChanged)Text(listOfNotNull(if(difference.dateChanged)"开学日期更新" else null,if(difference.timesChanged)"逐节作息更新" else null).joinToString(" · "),style=MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ImportDatePicker(date: String,onDismiss: ()->Unit,onSelect: (String)->Unit) {

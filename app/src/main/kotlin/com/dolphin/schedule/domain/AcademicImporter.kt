@@ -8,8 +8,6 @@ import java.time.LocalTime
 data class AcademicBlock(val name: String,val weeks: String,val teacher: String,val room: String)
 data class AcademicRow(val label: String,val start: String,val end: String,val cells: List<List<AcademicBlock>>)
 data class AcademicSnapshot(val term: String,val startWeek: Int,val endWeek: Int,val rows: List<AcademicRow>,val termStartDate: String?=null)
-data class ScheduleDifference(val added: List<Course>,val removed: List<Course>,val timesChanged: Boolean,val dateChanged: Boolean)
-
 /** 网页只负责读取原始字段；校验、周次、合并、稳定标识和撤销在 Kotlin 执行。 */
 object AcademicImporter {
     fun convert(value: AcademicSnapshot,current: Schedule,confirmedDate: String?=null): Schedule {
@@ -67,10 +65,7 @@ object AcademicImporter {
         if(canonical.any { it.room.isEmpty() })notes+="部分课程没有地点，已保留课程，可稍后补充。"
         return validateSchedule(Schedule(Term(value.term,startDate,value.endWeek),value.rows.map { Period(it.start,it.end,it.label) },canonical,notes),allowEmpty=false)
     }
-    fun difference(before: Schedule,after: Schedule): ScheduleDifference {
-        val old=before.courses.map(::contentKey).toSet();val next=after.courses.map(::contentKey).toSet()
-        return ScheduleDifference(after.courses.filter { contentKey(it) !in old },before.courses.filter { contentKey(it) !in next },before.periods!=after.periods,before.term.startDate!=after.term.startDate)
-    }
+    fun difference(before: Schedule,after: Schedule): ScheduleDifference = compareSchedules(before,after)
     fun apply(data: AppData,schedule: Schedule): AppData=data.copy(schedule=validateSchedule(schedule,allowEmpty=false),onboarded=true,
         academicImport=AcademicHistory("gdcmxy",schedule.term.name,Instant.now().toString(),data.schedule,schedule))
     fun undo(data: AppData,expected: Schedule): AppData {

@@ -79,6 +79,7 @@ Kotlin 主源码、JVM 测试和设备测试分别统一位于 `src/main/kotlin/
 | `ui/common/DolphinSymbols.kt` / `DolphinMotion.kt` | 本地图标着色、动效曲线与时长 | 统一视觉参数，不引入网络字体 |
 | `ui/navigation/PredictivePageBack.kt` | 系统返回进度、取消复原与返回交接 | 完成手势才调用现有返回规则，不直接丢弃草稿 |
 | `domain/` | 课程模型、日期、布局、导入、教材关联和校验 | 尽量保持可独立 JVM 测试，不直接操作 UI 或网络 |
+| `domain/ScheduleDifference.kt` / `ui/importing/ScheduleDifferencePreview.kt` | 共用的课程、学期和作息变化比较与只读明细 | 纯规则与显示分开，含糊课程不猜测配对，不修改导入确认与保存逻辑 |
 | `data/NativeRepository.kt` | SQLite 事务、已提交快照与冲突保护 | 一份应用持久数据，不为每个页面复制数据库 |
 | `data/AppDataCodec.kt` | 备份和数据库 JSON 编解码 | 兼容输入、边界校验与有界数据 |
 | `data/LegacyDataReader.kt` | 首次同包升级读取旧 IndexedDB | 本地、只读、不加载旧界面 |

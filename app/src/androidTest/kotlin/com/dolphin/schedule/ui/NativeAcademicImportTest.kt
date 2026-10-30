@@ -130,6 +130,18 @@ class NativeAcademicImportTest {
         compose.onNodeWithText("放弃识别").performClick()
         assertNull(model.academicDraft);assertEquals(changed,data())
     }
+    @Test fun inspectingChangesDoesNotAcknowledgeOrWriteThePreview() {
+        deliver(snapshot(date=true))
+        scrollTo("查看变更明细");compose.onNodeWithText("查看变更明细").performClick()
+        compose.onNodeWithTag("schedule-difference-list").performScrollToNode(hasText("原有手动课程"))
+        compose.onNodeWithText("原有手动课程").assertIsDisplayed()
+        assertEquals(baseline,data());assertFalse(model.academicAcknowledged)
+        compose.onNodeWithTag("schedule-difference-list").performScrollToNode(hasText("返回核对"))
+        compose.onNodeWithText("返回核对").performClick()
+        compose.onNodeWithTag("schedule-difference-list").assertDoesNotExist()
+        assertEquals(baseline,data());assertNotNull(model.academicDraft);assertFalse(model.academicAcknowledged)
+        scrollTo("确认导入");compose.onNodeWithText("确认导入").assertIsNotEnabled()
+    }
     @Test fun invalidOrEmptyResultAndUnmatchedRequestsNeverTouchSavedSchedule() {
         val raw=JSONObject(snapshot()).put("rows",JSONArray()).toString()
         deliver(raw)
