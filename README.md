@@ -113,13 +113,7 @@ npm ci --ignore-scripts
 npm run check
 ```
 
-Windows PowerShell：
-
-```powershell
-.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
-```
-
-macOS / Linux：
+Bash：
 
 ```sh
 bash ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
