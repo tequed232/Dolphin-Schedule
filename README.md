@@ -10,6 +10,10 @@ Android APP 最低支持 **Android 8.0（API 26）**。已发布版本和安装�
 
 未发布源码已增加导入变更明细、持久待确认结果、可选保留手动课程与周期教务检查。它们尚不包含在已发布的 v1.6.1 附件中；实现和验收范围见 [功能清单](docs/native-rebuild.md#分阶段补齐)，具体变化见 [版本记录](RELEASE_NOTES.md)。
 
+## 作者：
+
+- 反馈问题时，请附版本、Android 版本、重现步骤与实际结果；涉及教务或 Excel 时补充系统 WebView 版本。截图和日志请移除个人信息。
+
 ## 主要功能
 
 - **列表与平铺课表**：日期条、月历、下一节课、课程搜索、跨节课程块、横向浏览与边缘翻周，保留青色强调色和圆角卡片。
@@ -131,8 +135,6 @@ debug APK 位于 `app/build/outputs/apk/debug/app-debug.apk`。npm 仅提供仓�
 | 源码文件与提交规则 | [源码准入](docs/source-policy.md) |
 | 教务适配和本版功能范围 | [教务导入](docs/decisions-academic-import.md)、[功能清单](docs/native-rebuild.md) |
 | 版本变化 | [版本记录](RELEASE_NOTES.md) |
-
-作者：[tequed232](https://github.com/tequed232/)。反馈问题时，请附版本、Android 版本、重现步骤与实际结果；涉及教务或 Excel 时补充系统 WebView 版本。截图和日志请移除个人信息。
 
 ## 许可
 
